@@ -411,8 +411,7 @@ export default function About() {
 
             <div className="flex gap-4 flex-wrap">
 
-              <a
-                href="/signup"
+              <a href="/signup"
                 className="bg-[#1d1d1f] text-white px-16 py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl min-w-[320px]"
               >
 
