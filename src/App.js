@@ -4,7 +4,6 @@ import Home from "./pages/Home";
 import Features from "./pages/Features";
 import HowItWorks from "./pages/HowItWorks";
 import Students from "./pages/Students";
-import Recruiters from "./pages/Recruiters";
 import About from "./pages/About";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -31,11 +30,6 @@ export default function App() {
         <Route
           path="/students"
           element={<Students />}
-        />
-
-        <Route
-          path="/recruiters"
-          element={<Recruiters />}
         />
 
         <Route

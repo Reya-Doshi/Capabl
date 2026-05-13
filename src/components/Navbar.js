@@ -33,10 +33,6 @@ export default function Navbar() {
             Students
           </Link>
 
-          <Link to="/recruiters">
-            Recruiters
-          </Link>
-
           <Link to="/about">
             About
           </Link>
