@@ -24,17 +24,7 @@ import {
   Rocket,
 } from "lucide-react";
 
-import { useEffect, useState } from "react";
-
 export default function Dashboard() {
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    setTimeout(() => {
-      setProgress(62);
-    }, 300);
-  }, []);
-
   return (
     <div className="min-h-screen bg-[#f7f5f2] flex">
       {/* SIDEBAR */}
@@ -151,11 +141,17 @@ export default function Dashboard() {
             </p>
           </div>
 
+          {/* RIGHT */}
+
           <div className="flex items-center gap-5">
-            <button className="h-14 px-8 rounded-2xl bg-[#1d1d1f] text-white flex items-center gap-3 font-semibold hover:opacity-90 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
+            <a
+              href="/analyzer"
+              className="h-14 px-8 rounded-2xl bg-[#1d1d1f] text-white flex items-center gap-3 font-semibold hover:opacity-90 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+            >
               Start AI Analyzer
+
               <Sparkles className="w-5 h-5" />
-            </button>
+            </a>
 
             <div className="flex items-center gap-3">
               <img
@@ -177,10 +173,10 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* TOP CARDS */}
+        {/* CARDS */}
 
         <div className="grid lg:grid-cols-3 gap-5 mb-6">
-          {/* Readiness */}
+          {/* READINESS SCORE */}
 
           <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-start gap-5 mb-6">
@@ -189,7 +185,7 @@ export default function Dashboard() {
               </div>
 
               <div>
-                <h3 className="text-2xl font-semibold mb-3">
+                <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-3">
                   Readiness Score
                 </h3>
 
@@ -197,7 +193,7 @@ export default function Dashboard() {
                   78%
                 </h2>
 
-                <p className="text-slate-500 font-medium">
+                <p className="text-slate-500 leading-relaxed font-medium">
                   Your overall career readiness based on AI analysis
                 </p>
               </div>
@@ -205,14 +201,15 @@ export default function Dashboard() {
 
             <a
               href="/analyzer"
-              className="flex items-center gap-2 font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-2 font-semibold hover:gap-3 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
             >
               View Full
+
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>
 
-          {/* Match Goals */}
+          {/* MATCH GOALS */}
 
           <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-start gap-5 mb-6">
@@ -221,7 +218,7 @@ export default function Dashboard() {
               </div>
 
               <div>
-                <h3 className="text-2xl font-semibold mb-3">
+                <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-3">
                   Match Goals
                 </h3>
 
@@ -229,7 +226,7 @@ export default function Dashboard() {
                   12
                 </h2>
 
-                <p className="text-slate-500 font-medium">
+                <p className="text-slate-500 leading-relaxed font-medium">
                   Top career & job matches for your goals
                 </p>
               </div>
@@ -237,14 +234,15 @@ export default function Dashboard() {
 
             <a
               href="/recommendations"
-              className="flex items-center gap-2 font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-2 font-semibold hover:gap-3 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
             >
               View Full
+
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>
 
-          {/* Skill Strength */}
+          {/* SKILL STRENGTH */}
 
           <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-start gap-5 mb-6">
@@ -253,7 +251,7 @@ export default function Dashboard() {
               </div>
 
               <div>
-                <h3 className="text-2xl font-semibold mb-3">
+                <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-3">
                   Skill Strength
                 </h3>
 
@@ -261,7 +259,7 @@ export default function Dashboard() {
                   8
                 </h2>
 
-                <p className="text-slate-500 font-medium">
+                <p className="text-slate-500 leading-relaxed font-medium">
                   Strong skills that make you stand out
                 </p>
               </div>
@@ -269,9 +267,10 @@ export default function Dashboard() {
 
             <a
               href="/skill-gap"
-              className="flex items-center gap-2 font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-2 font-semibold hover:gap-3 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
             >
               View Full
+
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>
@@ -280,7 +279,7 @@ export default function Dashboard() {
         {/* SECOND ROW */}
 
         <div className="grid lg:grid-cols-3 gap-5 mb-6">
-          {/* Skill Gap */}
+          {/* SKILL GAP */}
 
           <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-start gap-5 mb-6">
@@ -289,7 +288,7 @@ export default function Dashboard() {
               </div>
 
               <div>
-                <h3 className="text-2xl font-semibold mb-3">
+                <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-3">
                   Skill Gap Overview
                 </h3>
 
@@ -297,7 +296,7 @@ export default function Dashboard() {
                   5
                 </h2>
 
-                <p className="text-slate-500 font-medium">
+                <p className="text-slate-500 leading-relaxed font-medium">
                   Important skills to learn for your target role
                 </p>
               </div>
@@ -305,14 +304,15 @@ export default function Dashboard() {
 
             <a
               href="/skill-gap"
-              className="flex items-center gap-2 font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-2 font-semibold hover:gap-3 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
             >
               View Full
+
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>
 
-          {/* Next Steps */}
+          {/* NEXT STEPS */}
 
           <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-start gap-5 mb-6">
@@ -321,7 +321,7 @@ export default function Dashboard() {
               </div>
 
               <div>
-                <h3 className="text-2xl font-semibold mb-3">
+                <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-3">
                   Next Steps
                 </h3>
 
@@ -329,7 +329,7 @@ export default function Dashboard() {
                   4
                 </h2>
 
-                <p className="text-slate-500 font-medium">
+                <p className="text-slate-500 leading-relaxed font-medium">
                   Recommended actions to move forward
                 </p>
               </div>
@@ -337,14 +337,15 @@ export default function Dashboard() {
 
             <a
               href="/road-map"
-              className="flex items-center gap-2 font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-2 font-semibold hover:gap-3 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
             >
               View Full
+
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>
 
-          {/* Roadmap Progress */}
+          {/* ROADMAP PROGRESS */}
 
           <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-start gap-5 mb-6">
@@ -353,7 +354,7 @@ export default function Dashboard() {
               </div>
 
               <div>
-                <h3 className="text-2xl font-semibold mb-3">
+                <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-3">
                   Roadmap Progress
                 </h3>
 
@@ -361,7 +362,7 @@ export default function Dashboard() {
                   62%
                 </h2>
 
-                <p className="text-slate-500 font-medium">
+                <p className="text-slate-500 leading-relaxed font-medium">
                   Your learning roadmap completion
                 </p>
               </div>
@@ -369,9 +370,10 @@ export default function Dashboard() {
 
             <a
               href="/road-map"
-              className="flex items-center gap-2 font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-2 font-semibold hover:gap-3 transition-all"
             >
               View Full
+
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>
@@ -382,9 +384,9 @@ export default function Dashboard() {
         <div className="grid lg:grid-cols-[1.2fr,1fr] gap-6 mb-6">
           {/* ROADMAP */}
 
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-2xl font-bold text-[#1d1d1f]">
                 Roadmap Progress
               </h2>
 
@@ -393,60 +395,87 @@ export default function Dashboard() {
                 className="text-blue-600 font-semibold flex items-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
               >
                 View Roadmap
+
                 <ArrowRight className="w-4 h-4" />
               </a>
             </div>
 
-            <h3 className="text-2xl font-semibold mb-5">
+            <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-5">
               Full Stack Developer
             </h3>
 
             <div className="flex items-center gap-4 mb-10">
               <div className="flex-1 h-4 rounded-full bg-[#ece6dc] overflow-hidden">
-                <div
-                  className="h-full bg-[#d4a44d] rounded-full transition-all duration-1000 ease-out"
-                  style={{ width: `${progress}%` }}
-                ></div>
+                <div className="w-[62%] h-full bg-[#d4a44d] rounded-full"></div>
               </div>
 
-              <span className="text-2xl font-bold">
-                {progress}%
+              <span className="text-2xl font-bold text-[#1d1d1f]">
+                62%
               </span>
             </div>
 
             <div className="grid grid-cols-4 gap-5">
-              <div>
-                <h3 className="text-2xl font-bold">12</h3>
-                <p className="text-slate-500">Completed</p>
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="w-6 h-6 text-green-600" />
+
+                <div>
+                  <h3 className="text-2xl font-bold text-[#1d1d1f]">
+                    12
+                  </h3>
+
+                  <p className="text-slate-500">Completed</p>
+                </div>
               </div>
 
-              <div>
-                <h3 className="text-2xl font-bold">8</h3>
-                <p className="text-slate-500">In Progress</p>
+              <div className="flex items-center gap-3">
+                <Bell className="w-6 h-6 text-blue-600" />
+
+                <div>
+                  <h3 className="text-2xl font-bold text-[#1d1d1f]">
+                    8
+                  </h3>
+
+                  <p className="text-slate-500">In Progress</p>
+                </div>
               </div>
 
-              <div>
-                <h3 className="text-2xl font-bold">5</h3>
-                <p className="text-slate-500">Pending</p>
+              <div className="flex items-center gap-3">
+                <Clock3 className="w-6 h-6 text-orange-500" />
+
+                <div>
+                  <h3 className="text-2xl font-bold text-[#1d1d1f]">
+                    5
+                  </h3>
+
+                  <p className="text-slate-500">Pending</p>
+                </div>
               </div>
 
-              <div>
-                <h3 className="text-2xl font-bold">3</h3>
-                <p className="text-slate-500">Locked</p>
+              <div className="flex items-center gap-3">
+                <Lock className="w-6 h-6 text-slate-500" />
+
+                <div>
+                  <h3 className="text-2xl font-bold text-[#1d1d1f]">
+                    3
+                  </h3>
+
+                  <p className="text-slate-500">Locked</p>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* RECENT ACTIVITY */}
+          {/* ACTIVITY */}
 
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
+          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-2xl font-bold text-[#1d1d1f]">
                 Recent Activity
               </h2>
 
               <button className="text-blue-600 font-semibold flex items-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
                 View All
+
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -458,16 +487,19 @@ export default function Dashboard() {
                   desc: "Review your latest analysis",
                   time: "2h ago",
                 },
+
                 {
                   title: "Roadmap updated",
                   desc: "3 new milestones added",
                   time: "1d ago",
                 },
+
                 {
                   title: "Mock interview completed",
                   desc: "You scored 85%",
                   time: "2d ago",
                 },
+
                 {
                   title: "New project added",
                   desc: "Capabl Platform",
@@ -476,7 +508,7 @@ export default function Dashboard() {
               ].map((item, index) => (
                 <div
                   key={index}
-                  className="flex items-start justify-between p-3 rounded-2xl transition-all duration-300 hover:bg-[#faf7f2] hover:-translate-y-1"
+                  className="flex items-start justify-between"
                 >
                   <div className="flex gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-[#f5f1ea] flex items-center justify-center">
@@ -484,13 +516,11 @@ export default function Dashboard() {
                     </div>
 
                     <div>
-                      <h3 className="font-semibold mb-1">
+                      <h3 className="font-semibold text-[#1d1d1f] mb-1">
                         {item.title}
                       </h3>
 
-                      <p className="text-slate-500">
-                        {item.desc}
-                      </p>
+                      <p className="text-slate-500">{item.desc}</p>
                     </div>
                   </div>
 
@@ -512,7 +542,7 @@ export default function Dashboard() {
             </div>
 
             <div>
-              <h2 className="text-2xl font-bold mb-2">
+              <h2 className="text-2xl font-bold text-[#1d1d1f] mb-2">
                 Small progress leads to big success!
               </h2>
 

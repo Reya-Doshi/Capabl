@@ -92,7 +92,7 @@ export default function Recommendations() {
         <div className="space-y-2">
           <a
             href="/dashboard"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all duration-200 hover:translate-x-1 font-medium"
           >
             <LayoutDashboard className="w-5 h-5" />
             Dashboard
@@ -100,7 +100,7 @@ export default function Recommendations() {
 
           <a
             href="/analyzer"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all duration-200 hover:translate-x-1 font-medium"
           >
             <Brain className="w-5 h-5" />
             AI Analyzer
@@ -108,7 +108,7 @@ export default function Recommendations() {
 
           <a
             href="/road-map"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all duration-200 hover:translate-x-1 font-medium"
           >
             <Route className="w-5 h-5" />
             Roadmap
@@ -116,7 +116,7 @@ export default function Recommendations() {
 
           <a
             href="/skill-gap"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all duration-200 hover:translate-x-1 font-medium"
           >
             <FileSearch className="w-5 h-5" />
             Skill Gap
@@ -124,7 +124,7 @@ export default function Recommendations() {
 
           <a
             href="/resume"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all duration-200 hover:translate-x-1 font-medium"
           >
             <FileText className="w-5 h-5" />
             Resume
@@ -132,7 +132,7 @@ export default function Recommendations() {
 
           <a
             href="/interview"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all duration-200 hover:translate-x-1 font-medium"
           >
             <Video className="w-5 h-5" />
             Mock Interview
@@ -140,7 +140,7 @@ export default function Recommendations() {
 
           <a
             href="/projects"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all duration-200 hover:translate-x-1 font-medium"
           >
             <FolderKanban className="w-5 h-5" />
             Projects
@@ -148,7 +148,7 @@ export default function Recommendations() {
 
           <a
             href="/recommendations"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#1d1d1f] text-white font-semibold"
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#1d1d1f] text-white font-semibold duration-200 hover:translate-x-1"
           >
             <Bookmark className="w-5 h-5 text-[#fffffff]" />
             Recommendations
@@ -156,7 +156,7 @@ export default function Recommendations() {
 
           <a
             href="/profile"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all duration-200 hover:translate-x-1 font-medium"
           >
             <User className="w-5 h-5" />
             Profile
@@ -164,7 +164,7 @@ export default function Recommendations() {
 
           <a
             href="/settings"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
+            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all duration-200 hover:translate-x-1 font-medium"
           >
             <Settings className="w-5 h-5" />
             Settings
@@ -206,7 +206,7 @@ export default function Recommendations() {
 
             {/* BELL */}
 
-            <button className="w-12 h-12 rounded-2xl bg-white border border-[#e8e6e1] flex items-center justify-center transition-all duration-300 hover:shadow-[0_10px_25px_rgba(0,0,0,0.08)] hover:scale-[1.03] active:scale-[0.97]">
+            <button className="w-12 h-12 rounded-2xl bg-white border border-[#e8e6e1] flex items-center justify-center transition-all duration-300 hover:shadow-[0_10px_25px_rgba(0,0,0,0.08)] hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
               <Bell className="w-5 h-5 text-[#1d1d1f]" />
             </button>
 
@@ -237,7 +237,7 @@ export default function Recommendations() {
         <div className="grid lg:grid-cols-4 gap-5 mb-8">
           {/* CARD */}
 
-          <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-500 opacity-100 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] hover:border-[#d9e8ff]">
+          <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-500 opacity-100 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] hover:border-[#d9e8ff] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-center gap-5">
               <div className="w-18 h-18 rounded-[1.5rem] bg-[#eef5ff] flex items-center justify-center transition-all duration-300 group-hover:scale-105">
                 <Briefcase className="w-8 h-8 text-blue-600" />
@@ -261,7 +261,7 @@ export default function Recommendations() {
 
           {/* CARD */}
 
-          <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-500 opacity-100 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] hover:border-[#d6eddc]">
+          <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-500 opacity-100 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] hover:border-[#d6eddc] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-center gap-5">
               <div className="w-18 h-18 rounded-[1.5rem] bg-[#edf8ef] flex items-center justify-center transition-all duration-300 group-hover:scale-105">
                 <GraduationCap className="w-8 h-8 text-green-600" />
@@ -285,7 +285,7 @@ export default function Recommendations() {
 
           {/* CARD */}
 
-          <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-500 opacity-100 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] hover:border-[#e4dcff]">
+          <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-500 opacity-100 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] hover:border-[#e4dcff] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-center gap-5">
               <div className="w-18 h-18 rounded-[1.5rem] bg-[#f3ecff] flex items-center justify-center transition-all duration-300 group-hover:scale-105">
                 <Building2 className="w-8 h-8 text-purple-600" />
@@ -309,7 +309,7 @@ export default function Recommendations() {
 
           {/* CARD */}
 
-          <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-500 opacity-100 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] hover:border-[#ffe4c4]">
+          <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-500 opacity-100 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] hover:border-[#ffe4c4] transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-center gap-5">
               <div className="w-18 h-18 rounded-[1.5rem] bg-[#fff3df] flex items-center justify-center transition-all duration-300 group-hover:scale-105">
                 <Star className="w-8 h-8 text-orange-500" />
@@ -341,7 +341,7 @@ export default function Recommendations() {
             {/* TABS */}
 
             <div className="flex items-center gap-3 mb-8">
-              <button className="h-11 px-6 rounded-full bg-[#1d1d1f] text-white text-sm font-semibold transition-all duration-300 hover:scale-[1.03] active:scale-[0.97]">
+              <button className="h-11 px-6 rounded-full bg-[#1d1d1f] text-white text-sm font-semibold transition-all duration-300 hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
                 Career Matches
               </button>
 

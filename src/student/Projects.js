@@ -256,7 +256,7 @@ export default function Projects() {
         <div className="grid lg:grid-cols-4 gap-5 mb-8">
           {/* CARD */}
 
-          <div className="group bg-[#faf7f2] border border-[#ece3d3] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_35px_rgba(0,0,0,0.08)] hover:border-[#e4d3b3]">
+          <div className="group bg-[#faf7f2] border border-[#ece3d3] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_35px_rgba(0,0,0,0.08)] hover:border-[#e4d3b3] hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-center gap-5">
               <div className="w-20 h-20 rounded-[1.7rem] bg-[#fff1cf] flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
                 <Folder className="w-9 h-9 text-[#d4a44d]" />
@@ -280,7 +280,7 @@ export default function Projects() {
 
           {/* CARD */}
 
-          <div className="group bg-[#f3faf5] border border-[#dfeee3] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_35px_rgba(0,0,0,0.08)] hover:border-[#cfe8d6]">
+          <div className="group bg-[#f3faf5] border border-[#dfeee3] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_35px_rgba(0,0,0,0.08)] hover:border-[#cfe8d6] hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-center gap-5">
               <div className="w-20 h-20 rounded-[1.7rem] bg-[#dff5e5] flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
                 <CheckCircle2 className="w-9 h-9 text-green-600" />
@@ -304,7 +304,7 @@ export default function Projects() {
 
           {/* CARD */}
 
-          <div className="group bg-[#f7f4ff] border border-[#e7e0ff] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_35px_rgba(0,0,0,0.08)] hover:border-[#ddd0ff]">
+          <div className="group bg-[#f7f4ff] border border-[#e7e0ff] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_35px_rgba(0,0,0,0.08)] hover:border-[#ddd0ff] hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-center gap-5">
               <div className="w-20 h-20 rounded-[1.7rem] bg-[#e8dcff] flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
                 <Code2 className="w-9 h-9 text-purple-600" />
@@ -328,7 +328,7 @@ export default function Projects() {
 
           {/* CARD */}
 
-          <div className="group bg-[#f4f8ff] border border-[#dde9ff] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_35px_rgba(0,0,0,0.08)] hover:border-[#cfe0ff]">
+          <div className="group bg-[#f4f8ff] border border-[#dde9ff] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_35px_rgba(0,0,0,0.08)] hover:border-[#cfe0ff] hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-center gap-5">
               <div className="w-20 h-20 rounded-[1.7rem] bg-[#dceaff] flex items-center justify-center transition-all duration-300 group-hover:scale-110 group-hover:rotate-3">
                 <Star className="w-9 h-9 text-blue-600" />
@@ -370,19 +370,19 @@ export default function Projects() {
             {/* FILTERS */}
 
             <div className="flex items-center gap-3 mb-6">
-              <button className="h-10 px-6 rounded-full bg-[#1d1d1f] text-white text-sm font-semibold">
+              <button className="h-10 px-6 rounded-full bg-[#1d1d1f] text-white text-sm font-semibold transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
                 All
               </button>
 
-              <button className="h-10 px-6 rounded-full bg-white border border-[#e8e6e1] text-sm font-medium">
+              <button className="h-10 px-6 rounded-full bg-white border border-[#e8e6e1] text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
                 Completed
               </button>
 
-              <button className="h-10 px-6 rounded-full bg-white border border-[#e8e6e1] text-sm font-medium">
+              <button className="h-10 px-6 rounded-full bg-white border border-[#e8e6e1] text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
                 In Progress
               </button>
 
-              <button className="h-10 px-6 rounded-full bg-white border border-[#e8e6e1] text-sm font-medium">
+              <button className="h-10 px-6 rounded-full bg-white border border-[#e8e6e1] text-sm font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
                 Planned
               </button>
             </div>

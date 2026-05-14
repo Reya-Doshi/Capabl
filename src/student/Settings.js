@@ -180,7 +180,7 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              <button className="group h-11 px-5 rounded-xl bg-[#c89a2b] text-white text-[14px] font-medium transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_10px_25px_rgba(200,154,43,0.22)] active:scale-[0.97]">
+              <button className="group h-11 px-5 rounded-xl bg-[#c89a2b] text-white text-[14px] font-medium transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_10px_25px_rgba(200,154,43,0.22)] active:scale-[0.97] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
                 Save Changes
               </button>
             </div>
@@ -195,7 +195,7 @@ export default function SettingsPage() {
                   className="w-[110px] h-[110px] rounded-full object-cover"
                 />
 
-                <button className="group absolute bottom-0 right-0 w-10 h-10 rounded-full bg-[#1d1d1f] flex items-center justify-center border-4 border-white transition-all duration-300 hover:scale-105 hover:shadow-[0_8px_20px_rgba(0,0,0,0.18)] active:scale-95">
+                <button className="group absolute bottom-0 right-0 w-10 h-10 rounded-full bg-[#1d1d1f] flex items-center justify-center border-4 border-white transition-all duration-300 hover:scale-105 hover:shadow-[0_8px_20px_rgba(0,0,0,0.18)] active:scale-95 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
                   <Camera className="w-4 h-4 text-white transition-all duration-300 group-hover:rotate-12" />
                 </button>
               </div>
@@ -354,7 +354,7 @@ export default function SettingsPage() {
                     </div>
 
                     <button
-                      className={`w-11 h-6 rounded-full flex items-center px-1 transition-all duration-300 ${
+                      className={`w-11 h-6 rounded-full flex items-center px-1 transition-all duration-300 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] ${
                         item[2]
                           ? "bg-[#c89a2b] justify-end"
                           : "bg-[#e5e5e5] justify-start"
@@ -445,7 +445,7 @@ export default function SettingsPage() {
               </p>
             </div>
 
-            <button className="group h-11 px-6 rounded-xl border border-[#ef4444] text-[#dc2626] text-[14px] font-medium transition-all duration-300 hover:bg-red-50 hover:scale-[1.03] active:scale-[0.97] flex items-center gap-2">
+            <button className="group h-11 px-6 rounded-xl border border-[#ef4444] text-[#dc2626] text-[14px] font-medium transition-all duration-300 hover:bg-red-50 hover:scale-[1.03] active:scale-[0.97] flex items-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
               <Trash2 className="w-4 h-4 transition-all duration-300 group-hover:rotate-6" />
               Delete Account
             </button>

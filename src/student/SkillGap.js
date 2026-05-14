@@ -205,7 +205,7 @@ export default function SkillGap() {
           {/* PROFILE */}
 
           <div className="flex items-center gap-5">
-            <button className="w-12 h-12 rounded-2xl bg-white border border-[#e8e6e1] flex items-center justify-center hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+            <button className="w-12 h-12 rounded-2xl bg-white border border-[#e8e6e1] flex items-center justify-center hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]">
               <Bell className="w-5 h-5 text-[#1d1d1f]" />
             </button>
 
@@ -236,7 +236,7 @@ export default function SkillGap() {
         <div className="grid lg:grid-cols-4 gap-5 mb-8">
           {/* CARD */}
 
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 hover:-translate-y-2 hover:shadow-2xl transition-all duration-300">
+          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 hover:-translate-y-2 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-center justify-between mb-5">
               <div className="w-12 h-12 rounded-2xl bg-[#f5edff] flex items-center justify-center">
                 <FileSearch className="w-5 h-5 text-purple-500" />
@@ -262,7 +262,7 @@ export default function SkillGap() {
 
           {/* CARD */}
 
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 hover:-translate-y-2 hover:shadow-2xl transition-all duration-300">
+          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 hover:-translate-y-2 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <CheckCircle2 className="w-10 h-10 text-green-500 mb-5" />
 
             <h3 className="text-sm font-medium text-slate-500 mb-2">
@@ -284,7 +284,7 @@ export default function SkillGap() {
 
           {/* CARD */}
 
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 hover:-translate-y-2 hover:shadow-2xl transition-all duration-300">
+          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 hover:-translate-y-2 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <TriangleAlert className="w-10 h-10 text-orange-400 mb-5" />
 
             <h3 className="text-sm font-medium text-slate-500 mb-2">
@@ -306,7 +306,7 @@ export default function SkillGap() {
 
           {/* CARD */}
 
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 hover:-translate-y-2 hover:shadow-2xl transition-all duration-300">
+          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 hover:-translate-y-2 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
             <Target className="w-10 h-10 text-blue-500 mb-5" />
 
             <h3 className="text-sm font-medium text-slate-500 mb-2">
@@ -378,7 +378,7 @@ export default function SkillGap() {
               ))}
             </div>
 
-            <button className="w-full h-12 border border-[#e8e6e1] rounded-xl mt-7 flex items-center justify-center gap-2 font-semibold hover:bg-[#f5f1ea] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200">
+            <button className="w-full h-12 border border-[#e8e6e1] rounded-xl mt-7 flex items-center justify-center gap-2 font-semibold hover:bg-[#f5f1ea] hover:scale-[1.02] active:scale-[0.98] transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
               View Full Skill Gap Analysis
 
               <ArrowRight className="w-4 h-4" />

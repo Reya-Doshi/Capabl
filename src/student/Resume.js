@@ -211,7 +211,7 @@ export default function Resume() {
               (Max size: 5MB)
             </p>
 
-            <button className="group relative overflow-hidden h-12 px-8 bg-[#1d1d1f] text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105 hover:shadow-[0_10px_30px_rgba(0,0,0,0.18)] active:scale-95 mb-5">
+            <button className="group relative overflow-hidden h-12 px-8 bg-[#1d1d1f] text-white rounded-xl font-semibold transition-all duration-300 hover:scale-105 hover:shadow-[0_10px_30px_rgba(0,0,0,0.18)] active:scale-95 mb-5 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
               <span className="relative z-10 flex items-center gap-2">
                 <Upload className="w-4 h-4 group-hover:-translate-y-1 transition-all duration-300" />
                 Upload PDF
@@ -225,7 +225,7 @@ export default function Resume() {
 
           {/* RESUME SCORE */}
 
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)]">
+          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-center gap-2 mb-8">
               <h3 className="text-xl font-semibold text-[#1d1d1f]">
                 Resume Score
@@ -262,7 +262,7 @@ export default function Resume() {
 
           {/* ATS SCORE */}
 
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)]">
+          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:shadow-xl">
             <div className="flex items-center gap-2 mb-8">
               <h3 className="text-xl font-semibold text-[#1d1d1f]">
                 ATS Score
@@ -299,7 +299,7 @@ export default function Resume() {
 
           {/* STRENGTH */}
 
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)]">
+          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:shadow-xl">
             <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-8">
               Resume Strength
             </h3>

@@ -8,6 +8,7 @@ body {
   background: #ffffff;
   color: #1d1d1f;
   -webkit-font-smoothing: antialiased;
+  cursor: default;
 }
 
 * {
@@ -17,8 +18,20 @@ body {
 a {
   text-decoration: none;
   color: inherit;
+  cursor: pointer;
+  user-select: none;
 }
 
 button {
   cursor: pointer;
+  user-select: none;
+}
+
+img {
+  user-select: none;
+}
+
+input,
+textarea {
+  cursor: text;
 }

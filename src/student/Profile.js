@@ -218,7 +218,7 @@ export default function Profile() {
                     className="w-[120px] h-[120px] rounded-full object-cover transition-all duration-300 hover:shadow-[0_18px_40px_rgba(0,0,0,0.18)]"
                   />
 
-                  <button className="group absolute bottom-1 right-1 w-11 h-11 rounded-full bg-white border border-[#ececec] flex items-center justify-center shadow-sm transition-all duration-300 hover:shadow-[0_10px_25px_rgba(0,0,0,0.12)] hover:bg-[#faf7f2] active:scale-95">
+                  <button className="group absolute bottom-1 right-1 w-11 h-11 rounded-full bg-white border border-[#ececec] flex items-center justify-center shadow-sm transition-all duration-300 hover:shadow-[0_10px_25px_rgba(0,0,0,0.12)] hover:bg-[#faf7f2] active:scale-95 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
                     <Camera className="w-5 h-5 transition-all duration-300 group-hover:rotate-12" />
                   </button>
                 </div>
@@ -295,7 +295,7 @@ export default function Profile() {
                   index === 0
                     ? "text-[#c89a2b] border-b-2 border-[#c89a2b]"
                     : "text-[#6b7280] hover:text-black"
-                }`}
+                } transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]`}
               >
                 {tab}
               </button>
@@ -307,7 +307,7 @@ export default function Profile() {
           <div className="grid lg:grid-cols-[1fr,1fr,1fr] gap-5">
             {/* ABOUT */}
 
-            <div className="group bg-white border border-[#e8e6e1] rounded-[22px] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)]">
+            <div className="group bg-white border border-[#e8e6e1] rounded-[22px] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:shadow-xl">
               <h2 className="text-[18px] font-semibold text-[#111111] mb-6">
                 About Me
               </h2>
@@ -368,7 +368,7 @@ export default function Profile() {
             <div className="space-y-5">
               {/* EDUCATION */}
 
-              <div className="group bg-white border border-[#e8e6e1] rounded-[22px] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)]">
+              <div className="group bg-white border border-[#e8e6e1] rounded-[22px] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:shadow-xl">
                 <h2 className="text-[18px] font-semibold text-[#111111] mb-6">
                   Education
                 </h2>
@@ -396,7 +396,7 @@ export default function Profile() {
 
               {/* SKILLS */}
 
-              <div className="group bg-white border border-[#e8e6e1] rounded-[22px] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)]">
+              <div className="group bg-white border border-[#e8e6e1] rounded-[22px] p-6 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:shadow-xl">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-[18px] font-semibold text-[#111111]">
                     Skills

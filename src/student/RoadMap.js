@@ -208,7 +208,7 @@ export default function RoadMap() {
           {/* PROFILE */}
 
           <div className="flex items-center gap-5">
-            <button className="w-12 h-12 rounded-2xl bg-white border border-[#e8e6e1] flex items-center justify-center relative">
+            <button className="w-12 h-12 rounded-2xl bg-white border border-[#e8e6e1] flex items-center justify-center relative transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
               <Bell className="w-5 h-5 text-[#1d1d1f]" />
 
               <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#c89a2b] text-white text-[10px] flex items-center justify-center font-bold">
@@ -243,7 +243,7 @@ export default function RoadMap() {
 <div className="grid lg:grid-cols-4 gap-5 mb-10">
   {/* CARD */}
 
-  <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#c89a2b]/10">
+  <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-2xl hover:shadow-[#c89a2b]/10">
     <div className="flex items-center justify-between mb-5">
       <h3 className="font-semibold text-[#1d1d1f]">
         Overall Progress
@@ -269,7 +269,7 @@ export default function RoadMap() {
 
   {/* CARD */}
 
-  <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-[#c89a2b]/10">
+  <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-2xl hover:shadow-[#c89a2b]/10">
     <div className="flex items-center justify-between mb-5">
       <h3 className="font-semibold text-[#1d1d1f]">
         Estimated Time
@@ -291,7 +291,7 @@ export default function RoadMap() {
 
   {/* CARD */}
 
-  <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-green-200/40">
+  <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-2xl hover:shadow-green-200/40">
     <div className="flex items-center justify-between mb-5">
       <h3 className="font-semibold text-[#1d1d1f]">
         Current Stage
@@ -313,7 +313,7 @@ export default function RoadMap() {
 
   {/* CARD */}
 
-  <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-purple-200/40">
+  <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-2xl hover:shadow-purple-200/40">
     <div className="flex items-center justify-between mb-5">
       <h3 className="font-semibold text-[#1d1d1f]">
         Target Role
@@ -342,7 +342,7 @@ export default function RoadMap() {
             Roadmap Stages
           </h2>
 
-          <button className="h-12 px-6 bg-white border border-[#e8e6e1] rounded-xl font-semibold hover:bg-[#f5f1ea] transition-all flex items-center gap-2">
+          <button className="h-12 px-6 bg-white border border-[#e8e6e1] rounded-xl font-semibold hover:bg-[#f5f1ea] transition-all flex items-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
             View Full Plan
 
             <ArrowRight className="w-4 h-4" />

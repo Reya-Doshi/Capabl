@@ -232,7 +232,7 @@ export default function Interview() {
                 insights.
               </p>
 
-              <button className="group h-14 px-8 rounded-2xl bg-[#1d1d1f] text-white flex items-center gap-3 font-semibold transition-all duration-300 hover:scale-105 hover:shadow-[0_10px_30px_rgba(0,0,0,0.18)] active:scale-95">
+              <button className="group h-14 px-8 rounded-2xl bg-[#1d1d1f] text-white flex items-center gap-3 font-semibold transition-all duration-300 hover:scale-105 hover:shadow-[0_10px_30px_rgba(0,0,0,0.18)] active:scale-95 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
                 <PlayCircle className="w-5 h-5 transition-all duration-300 group-hover:scale-110" />
                 Start New Interview
               </button>
@@ -313,7 +313,7 @@ export default function Interview() {
           {interviewTypes.map((item, index) => (
             <div
               key={index}
-              className="group bg-white border border-[#e8e6e1] rounded-[1.7rem] p-5 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_35px_rgba(0,0,0,0.08)] hover:border-[#e6d5b5]"
+              className="group bg-white border border-[#e8e6e1] rounded-[1.7rem] p-5 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_35px_rgba(0,0,0,0.08)] hover:border-[#e6d5b5] hover:-translate-y-1 hover:shadow-xl"
             >
               <div
                 className={`w-14 h-14 rounded-[1.3rem] ${item.color} flex items-center justify-center mb-5 transition-all duration-300 group-hover:scale-110`}
@@ -330,7 +330,7 @@ export default function Interview() {
               </p>
 
               <button
-                className={`w-full h-11 rounded-xl font-semibold text-[15px] transition-all duration-300 hover:scale-[1.03] active:scale-95 ${item.button}`}
+                className={`w-full h-11 rounded-xl font-semibold text-[15px] transition-all duration-300 hover:scale-[1.03] active:scale-95 ${item.button} transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]`}
               >
                 Start Interview
               </button>
@@ -339,7 +339,7 @@ export default function Interview() {
 
           {/* PERFORMANCE */}
 
-          <div className="group bg-white border border-[#e8e6e1] rounded-[1.7rem] p-5 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_35px_rgba(0,0,0,0.08)]">
+          <div className="group bg-white border border-[#e8e6e1] rounded-[1.7rem] p-5 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_35px_rgba(0,0,0,0.08)] hover:-translate-y-1 hover:shadow-xl">
             <h2 className="text-[22px] font-semibold text-[#1d1d1f] mb-6">
               Your Performance
             </h2>
@@ -384,7 +384,7 @@ export default function Interview() {
               </div>
             </div>
 
-            <button className="text-[#c89a2b] font-semibold flex items-center gap-2 text-[15px] group">
+            <button className="text-[#c89a2b] font-semibold flex items-center gap-2 text-[15px] group transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
               View Performance
 
               <ArrowRight className="w-4 h-4 transition-all duration-300 group-hover:translate-x-1" />

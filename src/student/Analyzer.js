@@ -147,7 +147,7 @@ export default function Analyzer() {
           {/* RIGHT */}
 
           <div className="flex items-center gap-5">
-            <button className="w-12 h-12 rounded-2xl bg-white border border-[#e8e6e1] flex items-center justify-center hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
+            <button className="w-12 h-12 rounded-2xl bg-white border border-[#e8e6e1] flex items-center justify-center hover:shadow-lg hover:-translate-y-1 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]">
               <Bell className="w-5 h-5 text-[#1d1d1f]" />
             </button>
 
@@ -247,7 +247,7 @@ export default function Analyzer() {
                   Resume uploaded
                 </div>
 
-                <button className="text-[#b89968] font-semibold text-sm hover:scale-105 active:scale-95 transition-all duration-200">
+                <button className="text-[#b89968] font-semibold text-sm hover:scale-105 active:scale-95 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
                   Change
                 </button>
               </div>
@@ -293,7 +293,7 @@ export default function Analyzer() {
                   LinkedIn connected
                 </div>
 
-                <button className="text-[#b89968] font-semibold text-sm hover:scale-105 active:scale-95 transition-all duration-200">
+                <button className="text-[#b89968] font-semibold text-sm hover:scale-105 active:scale-95 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
                   Change
                 </button>
               </div>
@@ -335,7 +335,7 @@ export default function Analyzer() {
                   GitHub connected
                 </div>
 
-                <button className="text-[#b89968] font-semibold text-sm hover:scale-105 active:scale-95 transition-all duration-200">
+                <button className="text-[#b89968] font-semibold text-sm hover:scale-105 active:scale-95 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
                   Change
                 </button>
               </div>
@@ -344,7 +344,7 @@ export default function Analyzer() {
 
           {/* BUTTON */}
 
-          <button className="w-full h-[76px] bg-[#1d1d1f] rounded-[1.5rem] text-white mt-8 flex flex-col items-center justify-center hover:opacity-95 hover:scale-[1.01] active:scale-[0.98] transition-all duration-200 shadow-lg hover:shadow-2xl">
+          <button className="w-full h-[76px] bg-[#1d1d1f] rounded-[1.5rem] text-white mt-8 flex flex-col items-center justify-center hover:opacity-95 hover:scale-[1.01] active:scale-[0.98] transition-all duration-200 shadow-lg hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]">
             <div className="flex items-center gap-2 mb-1">
               <Sparkles className="w-4 h-4 animate-pulse" />
 
@@ -626,7 +626,7 @@ export default function Analyzer() {
               </div>
             </div>
 
-            <button className="h-12 px-7 bg-[#1d1d1f] text-white rounded-xl flex items-center gap-2 font-semibold hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 shadow-md hover:shadow-xl">
+            <button className="h-12 px-7 bg-[#1d1d1f] text-white rounded-xl flex items-center gap-2 font-semibold hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 shadow-md hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]">
               <RotateCw className="w-4 h-4" />
 
               Re-analyze Now
