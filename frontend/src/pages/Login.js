@@ -7,8 +7,63 @@ import {
   EyeOff,
   ArrowRight,
 } from "lucide-react";
-
+import axios from "axios";
+import { useState } from "react";
 export default function Login() {
+  const [email, setEmail] = useState("");
+const [password, setPassword] = useState("");
+const handleLogin = async (e) => {
+
+  e.preventDefault();
+
+  try {
+
+    const { data } = await axios.post(
+      "http://localhost:5000/api/auth/login",
+      {
+        email,
+        password,
+      }
+    );
+
+    localStorage.setItem(
+      "token",
+      data.token
+    );
+
+    localStorage.setItem(
+  "userInfo",
+  JSON.stringify(data.user)
+);
+
+    if (
+      data.user?.college &&
+  data.user?.github &&
+  data.user?.linkedin
+    ) {
+
+      window.location.href = "/dashboard";
+
+    } else {
+
+      setTimeout(() => {
+
+        window.location.href = "/onboarding";
+
+      }, 100);
+
+    }
+
+  } catch (error) {
+
+    alert(
+      error.response?.data?.message ||
+      "Login failed"
+    );
+
+  }
+
+};
   return (
     <div className="min-h-screen bg-[#f7f5f2] overflow-hidden">
 
@@ -220,7 +275,7 @@ export default function Login() {
 
             {/* FORM */}
 
-            <form className="space-y-5">
+            <form onSubmit={handleLogin} className="space-y-5">
 
               {/* EMAIL */}
 
@@ -239,6 +294,8 @@ export default function Login() {
                   <input
                     type="email"
                     placeholder="Enter your email address"
+                    value={email}
+onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-[#e8e6e1] text-sm font-medium outline-none focus:border-[#b89968] focus:ring-4 focus:ring-[#b89968]/10"
                   />
 
@@ -263,6 +320,8 @@ export default function Login() {
                   <input
                     type="password"
                     placeholder="Enter your password"
+                    value={password}
+onChange={(e) => setPassword(e.target.value)}
                     className="w-full pl-11 pr-12 py-3 rounded-xl border border-[#e8e6e1] text-sm font-medium outline-none focus:border-[#b89968] focus:ring-4 focus:ring-[#b89968]/10"
                   />
 

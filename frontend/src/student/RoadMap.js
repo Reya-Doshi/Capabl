@@ -24,7 +24,12 @@ import {
 } from "lucide-react";
 
 export default function RoadMap() {
-  const studentName = "Reya Doshi";
+
+  const userInfo = JSON.parse(
+    localStorage.getItem("userInfo")
+  );
+
+  const studentName = userInfo?.name;
 
   const stages = [
     {

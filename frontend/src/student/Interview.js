@@ -22,6 +22,9 @@ import {
 } from "lucide-react";
 
 export default function Interview() {
+  const userInfo = JSON.parse(
+  localStorage.getItem("userInfo")
+);
   const [showFeedback, setShowFeedback] = useState(false);
 
   useEffect(() => {
@@ -205,7 +208,7 @@ export default function Interview() {
 
               <div>
                 <h3 className="font-semibold text-[#1d1d1f]">
-                  Reya Doshi
+{userInfo?.name}
                 </h3>
 
                 <p className="text-sm text-slate-500">Student</p>

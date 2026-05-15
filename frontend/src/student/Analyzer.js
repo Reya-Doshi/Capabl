@@ -24,7 +24,10 @@ import linkedinLogo from "../assets/images/linkedin.jpg";
 import githubLogo from "../assets/images/github.jpg";
 
 export default function Analyzer() {
-  const studentName = "Reya";
+  const userInfo = JSON.parse(
+  localStorage.getItem("userInfo")
+);
+  const studentName = "{userInfo?.name}";
 
   return (
     <div className="min-h-screen bg-[#f7f5f2] flex">
@@ -253,7 +256,7 @@ export default function Analyzer() {
               </div>
 
               <p className="mt-3 text-sm text-slate-500">
-                Reya_Doshi_Resume.pdf
+                {userInfo?.name}_Resume.pdf
               </p>
             </div>
 

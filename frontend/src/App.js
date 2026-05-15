@@ -16,6 +16,7 @@ import Projects from "./student/Projects";
 import Recommendations from "./student/Recommendations";
 import Profile from "./student/Profile";
 import Settings from "./student/Settings";
+import Onboarding from "./pages/Onboarding";
 export default function App() {
   return (
 
@@ -64,6 +65,7 @@ export default function App() {
 <Route path="/recommendations" element={<Recommendations />} />
 <Route path="/profile" element={<Profile />} />
 <Route path="/settings" element={<Settings />} />
+<Route path="/onboarding" element={<Onboarding />} />
 
       </Routes>
 

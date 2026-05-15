@@ -26,6 +26,9 @@ import {
 } from "lucide-react";
 
 export default function Resume() {
+  const userInfo = JSON.parse(
+  localStorage.getItem("userInfo")
+);
   const [resumeScore, setResumeScore] = useState(0);
   const [atsScore, setAtsScore] = useState(0);
 
@@ -182,7 +185,7 @@ export default function Resume() {
             />
 
             <div>
-              <h3 className="font-semibold text-[#1d1d1f]">Reya Doshi</h3>
+              <h3 className="font-semibold text-[#1d1d1f]">{userInfo?.name}</h3>
 
               <p className="text-sm text-slate-500">Student</p>
             </div>
@@ -375,7 +378,7 @@ export default function Resume() {
 
             <div className="bg-[#fcfcfc] border border-[#e8e6e1] rounded-[1.5rem] p-8 h-[640px] overflow-y-auto">
               <h1 className="text-4xl font-bold text-[#1d1d1f] mb-2">
-                Reya Doshi
+                 {userInfo?.name}
               </h1>
 
               <h2 className="text-xl font-semibold text-[#c89a2b] mb-5">
@@ -385,7 +388,7 @@ export default function Resume() {
               <div className="flex flex-wrap items-center gap-5 text-sm text-slate-600 mb-7">
                 <div className="flex items-center gap-2">
                   <Mail className="w-4 h-4" />
-                  reyadoshi@gmail.com
+                  {userInfo?.email}
                 </div>
 
                 <div className="flex items-center gap-2">

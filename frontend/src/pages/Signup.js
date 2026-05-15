@@ -12,13 +12,73 @@ import {
   ArrowRight,
 } from "lucide-react";
 
+import axios from "axios";
+
 export default function Signup() {
 
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const hasLength = password.length >= 8;
   const hasNumber = /\d/.test(password);
   const hasUppercase = /[A-Z]/.test(password);
+
+  const handleSignup = async (e) => {
+
+    e.preventDefault();
+
+    try {
+
+      setLoading(true);
+
+      const { data } = await axios.post(
+        "http://localhost:5000/api/auth/register",
+        {
+          name,
+          email,
+          password,
+        }
+      );
+
+      localStorage.setItem(
+        "token",
+        data.token
+      );
+
+      localStorage.setItem(
+  "userInfo",
+  JSON.stringify(data.user)
+);
+      
+
+      console.log(
+        localStorage.getItem("token")
+      );
+
+      setTimeout(() => {
+
+        window.location.href =
+          "/onboarding";
+
+      }, 100);
+
+    } catch (error) {
+
+      console.log(error.response?.data);
+
+      alert(
+        error.response?.data?.message ||
+        "Something went wrong"
+      );
+
+    } finally {
+
+      setLoading(false);
+
+    }
+  };
 
   return (
 
@@ -189,55 +249,12 @@ export default function Signup() {
 
             </div>
 
-            {/* SOCIAL */}
-
-            <div className="space-y-4">
-
-              <button className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-[#e8e6e1] font-semibold hover:bg-[#f7f5f2] transition-all">
-
-                <img
-                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
-                  alt=""
-                  className="w-5 h-5"
-                />
-
-                Sign up with Google
-
-              </button>
-
-              <button className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-[#e8e6e1] font-semibold hover:bg-[#f7f5f2] transition-all">
-
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/174/174857.png"
-                  alt=""
-                  className="w-5 h-5"
-                />
-
-                Sign up with LinkedIn
-
-              </button>
-
-            </div>
-
-            {/* DIVIDER */}
-
-            <div className="flex items-center gap-4 my-8">
-
-              <div className="flex-1 h-[1px] bg-[#e8e6e1]"></div>
-
-              <span className="text-[11px] font-bold text-slate-300 uppercase tracking-widest">
-
-                or sign up with email
-
-              </span>
-
-              <div className="flex-1 h-[1px] bg-[#e8e6e1]"></div>
-
-            </div>
-
             {/* FORM */}
 
-            <form className="space-y-5">
+            <form
+              onSubmit={handleSignup}
+              className="space-y-5"
+            >
 
               {/* NAME */}
 
@@ -256,6 +273,10 @@ export default function Signup() {
                   <input
                     type="text"
                     placeholder="Enter your full name"
+                    value={name}
+                    onChange={(e) =>
+                      setName(e.target.value)
+                    }
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-[#e8e6e1] text-sm font-medium outline-none focus:border-[#b89968] focus:ring-4 focus:ring-[#b89968]/10"
                   />
 
@@ -280,6 +301,10 @@ export default function Signup() {
                   <input
                     type="email"
                     placeholder="Enter your email address"
+                    value={email}
+                    onChange={(e) =>
+                      setEmail(e.target.value)
+                    }
                     className="w-full pl-11 pr-4 py-3 rounded-xl border border-[#e8e6e1] text-sm font-medium outline-none focus:border-[#b89968] focus:ring-4 focus:ring-[#b89968]/10"
                   />
 
@@ -305,7 +330,9 @@ export default function Signup() {
                     type="password"
                     placeholder="Create a strong password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) =>
+                      setPassword(e.target.value)
+                    }
                     className="w-full pl-11 pr-12 py-3 rounded-xl border border-[#e8e6e1] text-sm font-medium outline-none focus:border-[#b89968] focus:ring-4 focus:ring-[#b89968]/10"
                   />
 
@@ -315,13 +342,15 @@ export default function Signup() {
 
               </div>
 
-              {/* CONDITIONS */}
+              {/* PASSWORD RULES */}
 
               <div className="grid grid-cols-2 gap-y-2 mt-2">
 
                 <div
                   className={`flex items-center gap-2 text-[11px] font-semibold ${
-                    hasLength ? "text-green-500" : "text-slate-400"
+                    hasLength
+                      ? "text-green-500"
+                      : "text-slate-400"
                   }`}
                 >
 
@@ -333,7 +362,9 @@ export default function Signup() {
 
                 <div
                   className={`flex items-center gap-2 text-[11px] font-semibold ${
-                    hasNumber ? "text-green-500" : "text-slate-400"
+                    hasNumber
+                      ? "text-green-500"
+                      : "text-slate-400"
                   }`}
                 >
 
@@ -345,7 +376,9 @@ export default function Signup() {
 
                 <div
                   className={`flex items-center gap-2 text-[11px] font-semibold ${
-                    hasUppercase ? "text-green-500" : "text-slate-400"
+                    hasUppercase
+                      ? "text-green-500"
+                      : "text-slate-400"
                   }`}
                 >
 
@@ -363,10 +396,13 @@ export default function Signup() {
 
                 <button
                   type="submit"
+                  disabled={loading}
                   className="bg-[#1d1d1f] text-white w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-90 transition-all"
                 >
 
-                  Sign Up
+                  {loading
+                    ? "Creating..."
+                    : "Sign Up"}
 
                   <ArrowRight className="w-4 h-4" />
 
@@ -394,30 +430,6 @@ export default function Signup() {
               </div>
 
             </form>
-
-            {/* FOOTER */}
-
-            <p className="text-center text-[12px] text-slate-400 font-medium mt-10 leading-relaxed">
-
-              By signing up, you agree to our{" "}
-
-              <a href="#" className="text-[#b89968] font-bold">
-
-                Terms of Service
-
-              </a>
-
-              <br />
-
-              and{" "}
-
-              <a href="#" className="text-[#b89968] font-bold">
-
-                Privacy Policy
-
-              </a>
-
-            </p>
 
           </div>
 

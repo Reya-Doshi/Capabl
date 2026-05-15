@@ -21,6 +21,9 @@ import {
 } from "lucide-react";
 
 export default function Projects() {
+  const userInfo = JSON.parse(
+  localStorage.getItem("userInfo")
+);
   const projects = [
     {
       title: "Capabl AI Career Platform",
