@@ -306,8 +306,7 @@ export default function Resume() {
 
           {/* UPLOAD */}
 
-          <div className="bg-white border border-dashed border-[#ddd3c4] rounded-[2rem] p-10 flex flex-col items-center justify-center text-center min-h-[340px] w-full">
-
+<div className="group bg-white border border-dashed border-[#ddd3c4] rounded-[2rem] p-10 flex flex-col items-center justify-center text-center min-h-[340px] w-full transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_45px_rgba(212,164,77,0.12)] hover:border-[#d9c09a]">
             <div className="w-20 h-20 rounded-full bg-[#f7f1e7] flex items-center justify-center mb-6">
 
               <Upload className="w-10 h-10 text-[#c89a2b]" />
@@ -384,7 +383,7 @@ export default function Resume() {
 
       {/* RESUME SCORE */}
 
-      <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
+      <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] hover:border-[#e4d3b3]">
 
         <div className="flex items-center justify-between mb-6">
 
@@ -400,7 +399,7 @@ export default function Resume() {
 
           </div>
 
-          <div className="w-20 h-20 rounded-[1.8rem] bg-[#edf8ef] flex items-center justify-center">
+          <div className="w-20 h-20 rounded-[1.8rem] bg-[#edf8ef] flex items-center justify-center transition-all duration-500 group-hover:scale-110">
 
             <CheckCircle2 className="w-10 h-10 text-green-600" />
 
@@ -423,7 +422,7 @@ export default function Resume() {
 
       {/* ATS SCORE */}
 
-      <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
+      <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)] hover:border-[#e4d3b3]">
 
         <div className="flex items-center justify-between mb-6">
 
@@ -439,7 +438,7 @@ export default function Resume() {
 
           </div>
 
-          <div className="w-20 h-20 rounded-[1.8rem] bg-[#fff3df] flex items-center justify-center">
+          <div className="w-20 h-20 rounded-[1.8rem] bg-[#fff3df] flex items-center justify-center transition-all duration-500 group-hover:scale-110">
 
             <Search className="w-10 h-10 text-[#c89a2b]" />
 
@@ -464,7 +463,7 @@ export default function Resume() {
 
     {/* STRENGTHS */}
 
-    <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-7">
+    <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-7 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_18px_45px_rgba(0,0,0,0.08)] hover:border-[#e4d3b3]">
 
       <div className="flex items-center justify-between mb-8">
 
@@ -555,7 +554,7 @@ export default function Resume() {
 
     {/* AI SUGGESTIONS */}
 
-    <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-7">
+    <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-7 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_18px_45px_rgba(200,154,43,0.10)] hover:border-[#e4d3b3]">
 
       <div className="flex items-center justify-between mb-8">
 
@@ -646,8 +645,7 @@ export default function Resume() {
 
     {/* PREVIEW */}
 
-    <div className="bg-white border border-[#e8e6e1] rounded-[2rem] overflow-hidden">
-
+<div className="group bg-white border border-[#e8e6e1] rounded-[2rem] overflow-hidden transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_45px_rgba(0,0,0,0.08)] hover:border-[#e4d3b3]">
       {/* TOP */}
 
       <div className="px-7 py-6 border-b border-[#f1f1f1] flex items-center justify-between">
