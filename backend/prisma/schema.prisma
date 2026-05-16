@@ -8,78 +8,164 @@ datasource db {
 }
 
 model User {
-  id            Int      @id @default(autoincrement())
 
-  name          String
-  email         String   @unique
-  password      String
+  id              Int      @id @default(autoincrement())
 
-  college       String?
-  age           Int?
-  bio           String?
-  github        String?
-  linkedin      String?
-  resume        String?
-  profilePic    String?
+  name            String
+  email           String   @unique
+  password        String
 
-  createdAt     DateTime @default(now())
+  college         String?
+  age             Int?
+  bio             String?
 
-  skills         Skill[]
-  roadmaps       Roadmap[]
-  achievements   Achievement[]
-  aiAnalysis     AIAnalysis?
+  github          String?
+  linkedin        String?
+
+  resume          String?
+  profilePic      String?
+
+  createdAt       DateTime @default(now())
+
+  skills          Skill[]
+  roadmaps        Roadmap[]
+  achievements    Achievement[]
+
+  aiAnalysis      AIAnalysis?
+
 }
 
 model Skill {
-  id        Int    @id @default(autoincrement())
-  name      String
 
-  userId    Int
-  user      User   @relation(fields: [userId], references: [id])
+  id              Int      @id @default(autoincrement())
+
+  name            String
+
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id])
+
 }
 
 model Roadmap {
-  id          Int      @id @default(autoincrement())
-  title       String
-  progress    Int      @default(0)
 
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
+  id              Int      @id @default(autoincrement())
+
+  title           String
+  progress        Int      @default(0)
+
+  description     String?
+  deadline        String?
+
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id])
+
 }
 
 model Achievement {
-  id          Int      @id @default(autoincrement())
-  title       String
 
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id])
+  id              Int      @id @default(autoincrement())
+
+  title           String
+  description     String?
+
+  createdAt       DateTime @default(now())
+
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id])
+
 }
 
 model AIAnalysis {
 
-  id                 Int      @id @default(autoincrement())
+  id                        Int      @id @default(autoincrement())
 
-  bio                String?
-  phone              String?
-  location           String?
+  // BASIC INFO
 
-  degree             String?
-  specialization     String?
-  collegeName        String?
-  startYear          String?
-  endYear            String?
+  bio                       String?
+  phone                     String?
+  location                  String?
 
-  languages          String?
+  // EDUCATION
 
-  readinessScore     String?
-  careerFit          String?
+  degree                    String?
+  specialization            String?
+  collegeName               String?
 
-  strengths          String?
-  missingSkills      String?
-  aiSuggestions      String?
+  startYear                 String?
+  endYear                   String?
 
-  extractedSkills    String?
+  cgpa                      String?
 
-  userId             Int      @unique
-  user               User     @relation(fields: [userId], references: [id])
+  // AI SCORES
+
+  readinessScore            Int?
+  atsScore                  Int?
+  resumeScore               Int?
+
+  // CAREER FIT
+
+  careerFit                 String?
+
+  // ARRAYS
+
+  languages                 String[]
+
+  strengths                 String[]
+  weaknesses                String[]
+
+  missingSkills             String[]
+  extractedSkills           String[]
+
+  aiSuggestions             String[]
+
+  // RECOMMENDATIONS
+
+  recommendedRoles          String[]
+  recommendedCourses        String[]
+  recommendedProjects       String[]
+  recommendedInternships    String[]
+
+  whyRecommendations        String[]
+
+  // EXPERIENCE
+
+  internshipExperience      String[]
+  certifications            String[]
+
+  // PROJECTS
+
+  projectTitles             String[]
+  // PROJECTS
+
+savedProjects             String[]
+projectStatuses           String[]
+projectDescriptions       String[]
+projectTechnologies       String[]
+projectImages             String[]
+
+recommendedProjectTitles  String[]
+recommendedProjectDesc    String[]
+recommendedProjectTags    String[]
+
+totalProjects             Int?
+completedProjects         Int?
+inProgressProjects        Int?
+
+  // SOCIAL ANALYSIS
+
+  githubScore               Int?
+  linkedinScore             Int?
+
+  // FINAL AI SUMMARY
+
+  aiSummary                 String?
+
+  createdAt                 DateTime @default(now())
+
+  // RELATION
+
+  userId                    Int      @unique
+
+  user                      User     @relation(fields: [userId], references: [id])
+
 }

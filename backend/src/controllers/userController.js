@@ -1,4 +1,9 @@
 import prisma from "../config/db.js";
+import bcrypt from "bcrypt";
+
+
+
+/* GET USER PROFILE */
 
 export const getUserProfile = async (req, res) => {
 
@@ -24,9 +29,7 @@ export const getUserProfile = async (req, res) => {
 
     }
 
-    res.status(200).json({
-      user,
-    });
+    res.status(200).json(user);
 
   } catch (error) {
 
@@ -37,6 +40,10 @@ export const getUserProfile = async (req, res) => {
   }
 
 };
+
+
+
+/* UPDATE PROFILE */
 
 export const updateUserProfile = async (req, res) => {
 
@@ -79,7 +86,10 @@ export const updateUserProfile = async (req, res) => {
   }
 
 };
-import bcrypt from "bcrypt";
+
+
+
+/* CHANGE PASSWORD */
 
 export const changePassword = async (req, res) => {
 
@@ -91,10 +101,20 @@ export const changePassword = async (req, res) => {
     } = req.body;
 
     const user = await prisma.user.findUnique({
+
       where: {
         id: req.user.id,
       },
+
     });
+
+    if (!user) {
+
+      return res.status(404).json({
+        message: "User not found",
+      });
+
+    }
 
     const isMatch = await bcrypt.compare(
       currentPassword,
@@ -128,6 +148,52 @@ export const changePassword = async (req, res) => {
 
     res.status(200).json({
       message: "Password updated successfully",
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: error.message,
+    });
+
+  }
+
+};
+
+
+
+/* DELETE ACCOUNT */
+
+export const deleteAccount = async (req, res) => {
+
+  try {
+
+    const user = await prisma.user.findUnique({
+
+      where: {
+        id: req.user.id,
+      },
+
+    });
+
+    if (!user) {
+
+      return res.status(404).json({
+        message: "User not found",
+      });
+
+    }
+
+    await prisma.user.delete({
+
+      where: {
+        id: req.user.id,
+      },
+
+    });
+
+    res.status(200).json({
+      message: "Account deleted successfully",
     });
 
   } catch (error) {

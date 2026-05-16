@@ -6,6 +6,7 @@ import {
   getUserProfile,
   updateUserProfile,
   changePassword,
+  deleteAccount,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -25,6 +26,11 @@ router.put(
   "/change-password",
   protect,
   changePassword
+);
+router.delete(
+  "/delete-account",
+  protect,
+  deleteAccount
 );
 
 export default router;

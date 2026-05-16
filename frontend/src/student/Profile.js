@@ -9,9 +9,7 @@ import {
   Bookmark,
   User,
   Settings,
-  Search,
   Bell,
-  ChevronDown,
   MapPin,
   Mail,
   Calendar,
@@ -63,8 +61,6 @@ export default function Profile() {
     fetchProfile();
 
   }, []);
-
-  const tabs = ["Overview"];
 
   const skills =
     analysis?.extractedSkills
@@ -185,89 +181,79 @@ export default function Profile() {
 
       {/* MAIN */}
 
-      <main className="flex-1 lg:ml-[270px]">
+      <main className="flex-1 lg:ml-[270px] p-8 lg:p-12">
 
-        {/* TOPBAR */}
 
-        <div className="h-[86px] bg-white border-b border-[#e8e6e1] px-10 flex items-center justify-between">
-
-          {/* SEARCH */}
-
-          <div className="w-[430px] h-12 bg-[#fafafa] border border-[#e8e6e1] rounded-2xl px-5 flex items-center gap-3">
-
-            <Search className="w-5 h-5 text-slate-400" />
-
-            <input
-              type="text"
-              placeholder="Search anything..."
-              className="bg-transparent outline-none flex-1 text-[14px]"
-            />
-
-          </div>
-
-          {/* RIGHT */}
-
-          <div className="flex items-center gap-5">
-
-            <button className="w-11 h-11 rounded-2xl bg-white border border-[#e8e6e1] flex items-center justify-center relative">
-
-              <Bell className="w-5 h-5 text-[#1d1d1f]" />
-
-              <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-[#c89a2b] text-white text-[10px] flex items-center justify-center font-bold">
-
-                3
-
-              </div>
-
-            </button>
-
-            <div className="flex items-center gap-3">
-
-              <div className="w-11 h-11 rounded-full bg-[#ac731e] flex items-center justify-center text-white font-bold text-lg">
-
-  {(userInfo?.name || "U")
-    .charAt(0)
-    .toUpperCase()}
-
-</div>
-
-              <ChevronDown className="w-4 h-4" />
-
-            </div>
-
-          </div>
-
-        </div>
 
         {/* CONTENT */}
 
-        <div className="px-8 py-7">
+        <div>
 
           {/* HEADER */}
 
-          <div className="flex items-start justify-between mb-7">
+          
+{/* HEADER */}
 
-            <div>
+<div className="flex items-start justify-between mb-10">
 
-              <h1 className="text-[28px] font-semibold text-[#111111] mb-1">
+  <div>
 
-                My Profile
+    <h1 className="text-4xl font-bold text-[#1d1d1f] mb-3">
+      My Profile
+    </h1>
 
-              </h1>
+    <p className="text-slate-500 text-lg font-medium">
+      Manage your personal information and career insights.
+    </p>
 
-              <p className="text-[15px] text-[#6b7280] font-normal">
+  </div>
 
-                Manage your personal information and preferences
+  {/* RIGHT */}
 
-              </p>
+  <div className="flex items-center gap-5">
 
-            </div>
 
-          </div>
 
+    {/* BELL */}
+
+    <button className="w-12 h-12 rounded-2xl bg-white border border-[#e8e6e1] flex items-center justify-center hover:shadow-[0_10px_25px_rgba(0,0,0,0.08)] transition-all duration-300">
+
+      <Bell className="w-5 h-5 text-[#1d1d1f]" />
+
+    </button>
+
+    {/* PROFILE */}
+
+    <div className="flex items-center gap-3">
+
+      <div className="w-12 h-12 rounded-full bg-[#77410e] flex items-center justify-center text-white font-bold text-lg">
+
+        {(userInfo?.name || "U")
+          .charAt(0)
+          .toUpperCase()}
+
+      </div>
+
+      <div>
+
+        <h3 className="font-semibold text-[#1d1d1f]">
+          {userInfo?.name}
+        </h3>
+
+        <p className="text-sm text-slate-500">
+          Student
+        </p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
           {/* PROFILE CARD */}
 
-          <div className="bg-white border border-[#e8e6e1] rounded-[22px] p-7 mb-7">
+          <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-7 mb-7 transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)]">
 
             <div className="flex items-center justify-between">
 
@@ -278,7 +264,7 @@ export default function Profile() {
                 <div className="relative">
 
 
-                  <div className="w-[120px] h-[120px] rounded-full bg-[#917a59] flex items-center justify-center text-white text-[48px] font-bold shadow-lg select-none">
+              <div className="w-[120px] h-[120px] rounded-full bg-[#917a59] flex items-center justify-center text-white text-[48px] font-bold shadow-[0_15px_35px_rgba(145,122,89,0.28)] select-none transition-all duration-300 group-hover:scale-[1.02]">
 
   {(userInfo?.name || "U")
     .charAt(0)
@@ -287,7 +273,7 @@ export default function Profile() {
 </div>
                   
 
-                  <button className="absolute bottom-1 right-1 w-11 h-11 rounded-full bg-white border border-[#ececec] flex items-center justify-center shadow-sm">
+                 <button className="absolute bottom-1 right-1 w-11 h-11 rounded-full bg-white border border-[#ececec] flex items-center justify-center shadow-sm hover:shadow-lg transition-all duration-300">
 
                     <Camera className="w-5 h-5" />
 
@@ -375,7 +361,7 @@ export default function Profile() {
 
                 </div>
 
-                <div className="h-2.5 rounded-full bg-[#ece7df] overflow-hidden mb-4">
+                <div className="h-3 rounded-full bg-[#ece7df] overflow-hidden mb-4">
 
                   <div
                     style={{
@@ -404,7 +390,7 @@ export default function Profile() {
 
             {/* ABOUT */}
 
-            <div className="bg-white border border-[#e8e6e1] rounded-[22px] p-6">
+            <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)]">
 
               <h2 className="text-[18px] font-semibold text-[#111111] mb-6">
 
@@ -471,8 +457,7 @@ export default function Profile() {
                   <img
                     src="/linkedin.jpg"
                     alt="LinkedIn"
-                    className="w-11 h-11 rounded-full object-cover border border-[#ece7dc] p-2 bg-white"
-                  />
+className="w-11 h-11 rounded-full object-cover border border-[#ece7dc] p-2 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(0,0,0,0.08)]"                  />
 
                 </a>
 
@@ -485,8 +470,7 @@ export default function Profile() {
                   <img
                     src="/github.jpg"
                     alt="GitHub"
-                    className="w-11 h-11 rounded-full object-cover border border-[#ece7dc] p-2 bg-white"
-                  />
+className="w-11 h-11 rounded-full object-cover border border-[#ece7dc] p-2 bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(0,0,0,0.08)]"                  />
 
                 </a>
 
@@ -507,7 +491,7 @@ export default function Profile() {
 
             {/* EDUCATION */}
 
-            <div className="bg-white border border-[#e8e6e1] rounded-[22px] p-6">
+            <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)]">
 
               <h2 className="text-[18px] font-semibold text-[#111111] mb-6">
 
@@ -551,7 +535,7 @@ export default function Profile() {
 
             {/* SKILLS */}
 
-            <div className="bg-white border border-[#e8e6e1] rounded-[22px] p-6">
+            <div className="group bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_18px_40px_rgba(0,0,0,0.08)]">
 
               <h2 className="text-[18px] font-semibold text-[#111111] mb-6">
 
@@ -567,7 +551,7 @@ export default function Profile() {
 
                     <div
                       key={index}
-                      className="px-4 py-2 rounded-full bg-[#f7f5f2] text-[13px] font-medium"
+                      className="px-4 py-2 rounded-full bg-[#f7f5f2] text-[13px] font-medium transition-all duration-300 hover:bg-[#ece7df] hover:-translate-y-[2px]"
                     >
                       {skill}
                     </div>
