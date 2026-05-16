@@ -552,9 +552,48 @@ export default function Projects() {
 
       ) : (
 
-        <div className="text-center py-20 text-slate-400 font-medium">
-          No projects available yet.
+       <div className="grid gap-4">
+
+  {[1, 2].map((item) => (
+
+    <div
+      key={item}
+      className="bg-white border border-[#e8e6e1] rounded-[1.7rem] p-5 flex items-center justify-between"
+    >
+
+      {/* LEFT */}
+
+      <div className="flex items-center gap-5">
+
+        <div className="w-[190px] h-[110px] rounded-2xl bg-[#f3f3f3] animate-pulse"></div>
+
+        <div>
+
+          <div className="w-[260px] h-7 rounded-lg bg-[#f3f3f3] mb-4 animate-pulse"></div>
+
+          <div className="w-[380px] h-4 rounded-lg bg-[#f3f3f3] mb-2 animate-pulse"></div>
+
+          <div className="w-[320px] h-4 rounded-lg bg-[#f3f3f3] animate-pulse"></div>
+
         </div>
+
+      </div>
+
+      {/* RIGHT */}
+
+      <div className="space-y-3">
+
+        <div className="w-28 h-9 rounded-full bg-[#f3f3f3] animate-pulse"></div>
+
+        <div className="w-32 h-9 rounded-full bg-[#f3f3f3] animate-pulse"></div>
+
+      </div>
+
+    </div>
+
+  ))}
+
+</div>
 
       )}
 
@@ -592,7 +631,9 @@ export default function Projects() {
 
     <div className="space-y-4">
 
-      {recommended.map((item, index) => (
+      {recommended.length > 0 ? (
+
+  recommended.map((item, index) => (
 
         <div
           key={index}
@@ -627,7 +668,44 @@ export default function Projects() {
 
         </div>
 
-      ))}
+     ))
+
+) : (
+
+  <div className="space-y-4">
+
+    {[1, 2].map((item) => (
+
+      <div
+        key={item}
+        className="bg-white border border-[#e8e6e1] rounded-[1.7rem] p-5"
+      >
+
+        <div className="flex gap-4">
+
+          <div className="w-20 h-20 rounded-[1.5rem] bg-[#f3f3f3] animate-pulse"></div>
+
+          <div className="flex-1">
+
+            <div className="w-[220px] h-6 rounded-lg bg-[#f3f3f3] mb-4 animate-pulse"></div>
+
+            <div className="w-full h-4 rounded-lg bg-[#f3f3f3] mb-2 animate-pulse"></div>
+
+            <div className="w-[180px] h-4 rounded-lg bg-[#f3f3f3] mb-4 animate-pulse"></div>
+
+            <div className="w-24 h-8 rounded-full bg-[#f3f3f3] animate-pulse"></div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    ))}
+
+  </div>
+
+)}
 
     </div>
 
