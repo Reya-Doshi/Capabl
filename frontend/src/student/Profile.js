@@ -14,12 +14,13 @@ import {
   Mail,
   Calendar,
   CheckCircle2,
-
+  LogOut,
   Camera,
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import logout from "../utils/logout";
 
 export default function Profile() {
 
@@ -33,10 +34,9 @@ export default function Profile() {
       try {
 
         const token = localStorage.getItem("token");
-        console.log(token);
 
         const { data } = await axios.get(
-          "http://localhost:5000/api/users/profile",
+          "http://localhost:5000/api/analysis",
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -45,14 +45,14 @@ export default function Profile() {
         );
 
         setUserInfo(data.user);
-
-        if (data.user?.aiAnalysis) {
-          setAnalysis(data.user.aiAnalysis);
-        }
+        setAnalysis(data.analysis);
 
       } catch (error) {
 
         console.log(error);
+        if (error.response?.status === 401) {
+          logout();
+        }
 
       }
 
@@ -62,10 +62,15 @@ export default function Profile() {
 
   }, []);
 
-  const skills =
-    analysis?.extractedSkills
-      ? analysis.extractedSkills.split(",")
-      : [];
+  const skills = Array.isArray(userInfo?.skills)
+    ? userInfo.skills
+    : Array.isArray(analysis?.extractedSkills)
+    ? analysis.extractedSkills
+    : [];
+
+  const resumeUrl = userInfo?.resume
+    ? `http://localhost:5000/${userInfo.resume}`
+    : null;
 
   return (
 
@@ -176,6 +181,14 @@ export default function Profile() {
           </a>
 
         </div>
+
+        <button
+          onClick={logout}
+          className="flex items-center gap-3 px-4 py-3 rounded-2xl text-red-600 hover:bg-red-50 transition-all font-semibold mt-6"
+        >
+          <LogOut className="w-5 h-5" />
+          Logout
+        </button>
 
       </aside>
 
@@ -305,7 +318,7 @@ export default function Profile() {
 
                   <p className="text-[15px] text-slate-700 font-medium mb-4">
 
-                    {analysis?.careerFit || "Career path not analyzed yet"}
+                    {userInfo?.careerGoal || analysis?.careerFit || "Career goal not set"}
 
                   </p>
 
@@ -315,7 +328,7 @@ export default function Profile() {
 
                       <MapPin className="w-4 h-4" />
 
-                      {analysis?.location || "Location not analyzed"}
+                      {userInfo?.college || "College not added"}
 
                     </div>
 
@@ -331,7 +344,7 @@ export default function Profile() {
 
                       <Calendar className="w-4 h-4" />
 
-                      {analysis?.startYear || "----"} - {analysis?.endYear || "----"}
+                      Age {userInfo?.age || "—"}
 
                     </div>
 
@@ -355,7 +368,7 @@ export default function Profile() {
 
                   <span className="text-[#c89a2b] text-[16px] font-semibold">
 
-                    {analysis?.readinessScore || "0%"}
+                    {analysis?.readinessScore ?? 0}%
 
                   </span>
 
@@ -365,7 +378,7 @@ export default function Profile() {
 
                   <div
                     style={{
-                      width: analysis?.readinessScore || "0%",
+                      width: `${analysis?.readinessScore ?? 0}%`,
                     }}
                     className="h-full bg-[#c89a2b] rounded-full"
                   ></div>
@@ -412,13 +425,13 @@ export default function Profile() {
 
                     <p className="text-[12px] text-slate-400 mb-2">
 
-                      Phone
+                      Match Score
 
                     </p>
 
                     <h3 className="text-[15px] font-medium">
 
-                      {analysis?.phone || "Not analyzed"}
+                      {analysis?.matchScore ?? 0}%
 
                     </h3>
 
@@ -428,13 +441,13 @@ export default function Profile() {
 
                     <p className="text-[12px] text-slate-400 mb-2">
 
-                      Languages
+                      Skills
 
                     </p>
 
                     <h3 className="text-[15px] font-medium">
 
-                      {analysis?.languages || "Not analyzed"}
+                      {skills.length} added
 
                     </h3>
 
@@ -474,16 +487,20 @@ className="w-11 h-11 rounded-full object-cover border border-[#ece7dc] p-2 bg-wh
 
                 </a>
 
-                <a
-                  href={userInfo?.resume}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium"
-                >
-
-                  View Resume
-
-                </a>
+                {resumeUrl ? (
+                  <a
+                    href={resumeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-medium"
+                  >
+                    View Resume
+                  </a>
+                ) : (
+                  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 text-slate-400 text-sm font-medium">
+                    No resume
+                  </span>
+                )}
 
               </div>
 
@@ -503,13 +520,13 @@ className="w-11 h-11 rounded-full object-cover border border-[#ece7dc] p-2 bg-wh
 
                 <h3 className="text-[17px] font-semibold mb-2">
 
-                  {analysis?.degree || "Degree not analyzed"}
+                  {userInfo?.college || "College not added"}
 
                 </h3>
 
                 <p className="text-[14px] text-[#6b7280] mb-3">
 
-                  {analysis?.collegeName || "College not analyzed"}
+                  Career goal: {userInfo?.careerGoal || "Not set"}
 
                 </p>
 
@@ -517,13 +534,13 @@ className="w-11 h-11 rounded-full object-cover border border-[#ece7dc] p-2 bg-wh
 
                   <span className="text-[13px] text-slate-500">
 
-                    {analysis?.startYear || "----"} - {analysis?.endYear || "----"}
+                    Age: {userInfo?.age || "—"}
 
                   </span>
 
                   <div className="px-3 py-1 rounded-full bg-[#e8f8ef] text-green-700 text-[12px] font-semibold">
 
-                    {analysis?.specialization || "Specialization"}
+                    {analysis?.careerFit || "—"}
 
                   </div>
 

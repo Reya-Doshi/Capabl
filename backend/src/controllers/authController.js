@@ -53,6 +53,8 @@ export const registerUser = async (req, res) => {
     github: user.github,
     linkedin: user.linkedin,
     resume: user.resume,
+    resumeName: user.resumeName,
+    careerGoal: user.careerGoal,
     profilePic: user.profilePic,
   },
 
@@ -95,6 +97,8 @@ export const loginUser = async (req, res) => {
     github: user.github,
     linkedin: user.linkedin,
     resume: user.resume,
+    resumeName: user.resumeName,
+    careerGoal: user.careerGoal,
     profilePic: user.profilePic,
   },
 

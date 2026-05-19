@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import axios from "axios";
+import toast from "react-hot-toast";
 
 export default function Signup() {
 
@@ -68,7 +69,7 @@ export default function Signup() {
 
       console.log(error.response?.data);
 
-      alert(
+      toast.error(
         error.response?.data?.message ||
         "Something went wrong"
       );

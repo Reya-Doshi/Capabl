@@ -1,3 +1,7 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
 import {
   LayoutDashboard,
   Brain,
@@ -14,546 +18,412 @@ import {
   Target,
   BarChart3,
   Puzzle,
-  ClipboardList,
   Map,
   CheckCircle2,
-  Clock3,
-  Lock,
-  Bell,
-  ChevronDown,
-  Rocket,
+  GraduationCap,
+  LogOut,
+  Loader2,
+  Download,
 } from "lucide-react";
 
-export default function Dashboard() {
-  const userInfo = JSON.parse(
-  localStorage.getItem("userInfo")
+import logout from "../utils/logout";
+
+const SidebarLink = ({ href, icon: Icon, label, active }) => (
+  <a
+    href={href}
+    className={
+      active
+        ? "flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#1d1d1f] text-white font-semibold"
+        : "flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
+    }
+  >
+    <Icon className={active ? "w-5 h-5 text-white" : "w-5 h-5"} />
+    {label}
+  </a>
 );
+
+export default function Dashboard() {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
+
+  useEffect(() => {
+    const fetchAnalysis = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+
+        const { data } = await axios.get(
+          "http://localhost:5000/api/analysis",
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        setUserInfo(data.user);
+        setAnalysis(data.analysis);
+      } catch (error) {
+        console.error(error);
+        if (error.response?.status === 401) {
+          logout();
+          return;
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalysis();
+  }, [navigate]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f7f5f2] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-10 h-10 animate-spin text-[#b89968]" />
+          <p className="text-slate-500 font-medium">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const hasProfile = userInfo?.careerGoal && userInfo?.resume;
+
+  if (!hasProfile) {
+    return (
+      <div className="min-h-screen bg-[#f7f5f2] flex items-center justify-center px-6">
+        <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-10 text-center max-w-md w-full">
+          <div className="w-20 h-20 rounded-full bg-[#f5f1ea] flex items-center justify-center mx-auto mb-6">
+            <User className="w-10 h-10 text-[#1d1d1f]" />
+          </div>
+          <h2 className="text-2xl font-bold text-[#1d1d1f] mb-3">
+            Finish setting up your profile
+          </h2>
+          <p className="text-slate-500 mb-6">
+            Capabl needs your career goal and resume to generate your
+            personalized analysis.
+          </p>
+          <a
+            href="/onboarding"
+            className="inline-flex items-center gap-2 h-12 px-6 rounded-2xl bg-[#1d1d1f] text-white font-semibold hover:opacity-90"
+          >
+            Complete profile <ArrowRight className="w-4 h-4" />
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  const resumeUrl = userInfo.resume
+    ? `http://localhost:5000/${userInfo.resume}`
+    : null;
+
   return (
     <div className="min-h-screen bg-[#f7f5f2] flex">
-      {/* SIDEBAR */}
-
       <aside className="w-[270px] bg-white border-r border-[#e8e6e1] min-h-screen px-6 py-8 hidden lg:flex flex-col fixed left-0 top-0">
-        {/* LOGO */}
-
         <a href="/" className="flex items-center gap-2 mb-12">
           <div className="w-8 h-8 rounded-full border-[3px] border-[#1d1d1f] flex items-center justify-center">
             <div className="w-1.5 h-1.5 bg-[#1d1d1f] rounded-full"></div>
           </div>
-
           <span className="text-xl font-bold">Capabl</span>
         </a>
 
-        {/* NAV */}
-
-        <div className="space-y-2">
-          <a
-            href="/dashboard"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-[#1d1d1f] text-white font-semibold"
-          >
-            <LayoutDashboard className="w-5 h-5 text-white" />
-            Dashboard
-          </a>
-
-          <a
-            href="/analyzer"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
-          >
-            <Brain className="w-5 h-5" />
-            AI Analyzer
-          </a>
-
-          <a
-            href="/road-map"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
-          >
-            <Route className="w-5 h-5" />
-            Roadmap
-          </a>
-
-          <a
-            href="/skill-gap"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
-          >
-            <FileSearch className="w-5 h-5" />
-            Skill Gap
-          </a>
-
-          <a
-            href="/resume"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
-          >
-            <FileText className="w-5 h-5" />
-            Resume
-          </a>
-
-          <a
-            href="/interview"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
-          >
-            <Video className="w-5 h-5" />
-            Mock Interview
-          </a>
-
-          <a
-            href="/projects"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
-          >
-            <FolderKanban className="w-5 h-5" />
-            Projects
-          </a>
-
-          <a
-            href="/recommendations"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
-          >
-            <Bookmark className="w-5 h-5" />
-            Recommendations
-          </a>
-
-          <a
-            href="/profile"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
-          >
-            <User className="w-5 h-5" />
-            Profile
-          </a>
-
-          <a
-            href="/settings"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
-          >
-            <Settings className="w-5 h-5" />
-            Settings
-          </a>
+        <div className="space-y-2 flex-1">
+          <SidebarLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" active />
+          <SidebarLink href="/analyzer" icon={Brain} label="AI Analyzer" />
+          <SidebarLink href="/road-map" icon={Route} label="Roadmap" />
+          <SidebarLink href="/skill-gap" icon={FileSearch} label="Skill Gap" />
+          <SidebarLink href="/resume" icon={FileText} label="Resume" />
+          <SidebarLink href="/interview" icon={Video} label="Mock Interview" />
+          <SidebarLink href="/projects" icon={FolderKanban} label="Projects" />
+          <SidebarLink href="/recommendations" icon={Bookmark} label="Recommendations" />
+          <SidebarLink href="/profile" icon={User} label="Profile" />
+          <SidebarLink href="/settings" icon={Settings} label="Settings" />
         </div>
+
+        <button
+          onClick={logout}
+          className="flex items-center gap-3 px-4 py-3 rounded-2xl text-red-600 hover:bg-red-50 transition-all font-semibold mt-4"
+        >
+          <LogOut className="w-5 h-5" />
+          Logout
+        </button>
       </aside>
 
-      {/* MAIN */}
-
       <main className="flex-1 lg:ml-[270px] p-8 lg:p-12">
-        {/* HEADER */}
-
         <div className="flex items-start justify-between mb-10">
           <div>
             <h1 className="text-3xl font-bold text-[#1d1d1f] mb-3">
               Welcome back, {userInfo?.name} 👋
             </h1>
-
             <p className="text-slate-500 text-lg font-medium">
               Ready to take the next step in your career journey?
             </p>
           </div>
 
-          {/* RIGHT */}
-
-          <div className="flex items-center gap-5">
-            <a
-              href="/analyzer"
-              className="h-14 px-8 rounded-2xl bg-[#1d1d1f] text-white flex items-center gap-3 font-semibold hover:opacity-90 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-[#77410e] flex items-center justify-center text-white font-bold text-lg">
+              {(userInfo?.name || "U").charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <h3 className="font-semibold text-[#1d1d1f]">{userInfo?.name}</h3>
+              <p className="text-sm text-slate-500">Student</p>
+            </div>
+            <button
+              onClick={logout}
+              title="Log out"
+              className="lg:hidden ml-3 w-10 h-10 rounded-full border border-[#e8e6e1] flex items-center justify-center text-red-600 hover:bg-red-50"
             >
-              Start AI Analyzer
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
 
-              <Sparkles className="w-5 h-5" />
-            </a>
-
-            <div className="flex items-center gap-3">
-              <img
-                src="https://i.pravatar.cc/100?img=32"
-                alt="profile"
-                className="w-12 h-12 rounded-full object-cover"
-              />
-
-              <div>
-                <h3 className="font-semibold text-[#1d1d1f]">
-                  {userInfo?.name}
-                </h3>
-
-                <p className="text-sm text-slate-500">Student</p>
+        <div className="grid lg:grid-cols-[1.5fr,1fr] gap-5 mb-6">
+          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-7">
+            <div className="flex items-start gap-5">
+              <div className="w-16 h-16 rounded-2xl bg-[#f5f1ea] flex items-center justify-center shrink-0">
+                <GraduationCap className="w-8 h-8 text-[#b89968]" />
               </div>
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-slate-500 mb-1">
+                  Hello {userInfo?.name?.split(" ")[0]}
+                </h3>
+                <h2 className="text-2xl font-bold text-[#1d1d1f] mb-2">
+                  {userInfo?.college || "College not added"}
+                </h2>
+                <p className="text-slate-500">
+                  Career Goal:{" "}
+                  <span className="font-semibold text-[#1d1d1f]">
+                    {userInfo?.careerGoal}
+                  </span>
+                </p>
+              </div>
+            </div>
+          </div>
 
-              <ChevronDown className="w-4 h-4" />
+          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-7">
+            <h3 className="text-sm font-semibold text-slate-500 mb-3">
+              Resume
+            </h3>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#edf3ff] flex items-center justify-center shrink-0">
+                <FileText className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-[#1d1d1f] truncate">
+                  {userInfo?.resumeName || "Resume uploaded"}
+                </p>
+                <p className="text-xs text-slate-500">
+                  Used for AI analysis
+                </p>
+              </div>
+              {resumeUrl && (
+                <a
+                  href={resumeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-10 h-10 rounded-xl border border-[#e8e6e1] flex items-center justify-center hover:bg-[#f5f1ea]"
+                  title="Open resume"
+                >
+                  <Download className="w-4 h-4" />
+                </a>
+              )}
             </div>
           </div>
         </div>
 
-        {/* CARDS */}
-
         <div className="grid lg:grid-cols-3 gap-5 mb-6">
-          {/* READINESS SCORE */}
-
           <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-            <div className="flex items-start gap-5 mb-6">
-              <div className="w-20 h-20 rounded-[1.7rem] bg-[#e8f8ef] flex items-center justify-center">
-                <Target className="w-10 h-10 text-green-600" />
+            <div className="flex items-start gap-5">
+              <div className="w-16 h-16 rounded-2xl bg-[#e8f8ef] flex items-center justify-center shrink-0">
+                <Target className="w-8 h-8 text-green-600" />
               </div>
-
               <div>
-                <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-3">
+                <h3 className="text-lg font-semibold text-[#1d1d1f] mb-2">
                   Readiness Score
                 </h3>
-
-                <h2 className="text-4xl font-bold text-green-600 mb-3">
-                  78%
+                <h2 className="text-4xl font-bold text-green-600 mb-2">
+                  {analysis?.readinessScore ?? 0}%
                 </h2>
-
-                <p className="text-slate-500 leading-relaxed font-medium">
-                  Your overall career readiness based on AI analysis
+                <p className="text-slate-500 text-sm">
+                  Overall career readiness
                 </p>
               </div>
             </div>
-
-            <a
-              href="/analyzer"
-              className="flex items-center gap-2 font-semibold hover:gap-3 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              View Full
-
-              <ArrowRight className="w-4 h-4" />
-            </a>
           </div>
 
-          {/* MATCH GOALS */}
-
           <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-            <div className="flex items-start gap-5 mb-6">
-              <div className="w-20 h-20 rounded-[1.7rem] bg-[#f3ecff] flex items-center justify-center">
-                <Brain className="w-10 h-10 text-purple-600" />
+            <div className="flex items-start gap-5">
+              <div className="w-16 h-16 rounded-2xl bg-[#f3ecff] flex items-center justify-center shrink-0">
+                <Brain className="w-8 h-8 text-purple-600" />
               </div>
-
               <div>
-                <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-3">
-                  Match Goals
+                <h3 className="text-lg font-semibold text-[#1d1d1f] mb-2">
+                  Match Score
                 </h3>
-
-                <h2 className="text-4xl font-bold text-purple-600 mb-3">
-                  12
+                <h2 className="text-4xl font-bold text-purple-600 mb-2">
+                  {analysis?.matchScore ?? 0}%
                 </h2>
-
-                <p className="text-slate-500 leading-relaxed font-medium">
-                  Top career & job matches for your goals
+                <p className="text-slate-500 text-sm">
+                  vs {analysis?.careerFit}
                 </p>
               </div>
             </div>
-
-            <a
-              href="/recommendations"
-              className="flex items-center gap-2 font-semibold hover:gap-3 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              View Full
-
-              <ArrowRight className="w-4 h-4" />
-            </a>
           </div>
 
-          {/* SKILL STRENGTH */}
-
           <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-            <div className="flex items-start gap-5 mb-6">
-              <div className="w-20 h-20 rounded-[1.7rem] bg-[#edf3ff] flex items-center justify-center">
-                <BarChart3 className="w-10 h-10 text-blue-600" />
+            <div className="flex items-start gap-5">
+              <div className="w-16 h-16 rounded-2xl bg-[#edf3ff] flex items-center justify-center shrink-0">
+                <BarChart3 className="w-8 h-8 text-blue-600" />
               </div>
-
               <div>
-                <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-3">
-                  Skill Strength
+                <h3 className="text-lg font-semibold text-[#1d1d1f] mb-2">
+                  Skill Strengths
                 </h3>
-
-                <h2 className="text-4xl font-bold text-blue-600 mb-3">
-                  8
+                <h2 className="text-4xl font-bold text-blue-600 mb-2">
+                  {analysis?.skillStrengths?.length ?? 0}
                 </h2>
-
-                <p className="text-slate-500 leading-relaxed font-medium">
-                  Strong skills that make you stand out
+                <p className="text-slate-500 text-sm">
+                  Skills aligned with your goal
                 </p>
               </div>
             </div>
-
-            <a
-              href="/skill-gap"
-              className="flex items-center gap-2 font-semibold hover:gap-3 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              View Full
-
-              <ArrowRight className="w-4 h-4" />
-            </a>
           </div>
         </div>
 
-        {/* SECOND ROW */}
-
-        <div className="grid lg:grid-cols-3 gap-5 mb-6">
-          {/* SKILL GAP */}
-
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-            <div className="flex items-start gap-5 mb-6">
-              <div className="w-20 h-20 rounded-[1.7rem] bg-[#fff2e4] flex items-center justify-center">
-                <Puzzle className="w-10 h-10 text-orange-500" />
+        <div className="grid lg:grid-cols-2 gap-5 mb-6">
+          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-[#e8f8ef] flex items-center justify-center">
+                <CheckCircle2 className="w-5 h-5 text-green-600" />
               </div>
-
-              <div>
-                <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-3">
-                  Skill Gap Overview
-                </h3>
-
-                <h2 className="text-4xl font-bold text-orange-500 mb-3">
-                  5
-                </h2>
-
-                <p className="text-slate-500 leading-relaxed font-medium">
-                  Important skills to learn for your target role
-                </p>
-              </div>
+              <h2 className="text-xl font-bold text-[#1d1d1f]">
+                Skill Strengths
+              </h2>
             </div>
-
-            <a
-              href="/skill-gap"
-              className="flex items-center gap-2 font-semibold hover:gap-3 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              View Full
-
-              <ArrowRight className="w-4 h-4" />
-            </a>
+            {analysis?.skillStrengths?.length ? (
+              <div className="flex flex-wrap gap-2">
+                {analysis.skillStrengths.map((s) => (
+                  <span
+                    key={s}
+                    className="px-3 py-1.5 rounded-full bg-[#e8f8ef] text-green-700 text-sm font-medium capitalize"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-400 text-sm">
+                Add more skills matching your career goal to see strengths.
+              </p>
+            )}
           </div>
 
-          {/* NEXT STEPS */}
-
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-            <div className="flex items-start gap-5 mb-6">
-              <div className="w-20 h-20 rounded-[1.7rem] bg-[#e8f8f7] flex items-center justify-center">
-                <ClipboardList className="w-10 h-10 text-teal-600" />
+          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-10 h-10 rounded-xl bg-[#fff2e4] flex items-center justify-center">
+                <Puzzle className="w-5 h-5 text-orange-500" />
               </div>
-
-              <div>
-                <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-3">
-                  Next Steps
-                </h3>
-
-                <h2 className="text-4xl font-bold text-teal-600 mb-3">
-                  4
-                </h2>
-
-                <p className="text-slate-500 leading-relaxed font-medium">
-                  Recommended actions to move forward
-                </p>
-              </div>
+              <h2 className="text-xl font-bold text-[#1d1d1f]">
+                Skill Gaps
+              </h2>
             </div>
-
-            <a
-              href="/road-map"
-              className="flex items-center gap-2 font-semibold hover:gap-3 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-            >
-              View Full
-
-              <ArrowRight className="w-4 h-4" />
-            </a>
-          </div>
-
-          {/* ROADMAP PROGRESS */}
-
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
-            <div className="flex items-start gap-5 mb-6">
-              <div className="w-20 h-20 rounded-[1.7rem] bg-[#fff0f5] flex items-center justify-center">
-                <Map className="w-10 h-10 text-pink-500" />
+            {analysis?.skillGaps?.length ? (
+              <div className="flex flex-wrap gap-2">
+                {analysis.skillGaps.map((s) => (
+                  <span
+                    key={s}
+                    className="px-3 py-1.5 rounded-full bg-[#fff2e4] text-orange-600 text-sm font-medium capitalize"
+                  >
+                    {s}
+                  </span>
+                ))}
               </div>
-
-              <div>
-                <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-3">
-                  Roadmap Progress
-                </h3>
-
-                <h2 className="text-4xl font-bold text-pink-500 mb-3">
-                  62%
-                </h2>
-
-                <p className="text-slate-500 leading-relaxed font-medium">
-                  Your learning roadmap completion
-                </p>
-              </div>
-            </div>
-
-            <a
-              href="/road-map"
-              className="flex items-center gap-2 font-semibold hover:gap-3 transition-all"
-            >
-              View Full
-
-              <ArrowRight className="w-4 h-4" />
-            </a>
+            ) : (
+              <p className="text-slate-400 text-sm">
+                No skill gaps detected — you're on track!
+              </p>
+            )}
           </div>
         </div>
 
-        {/* LOWER GRID */}
-
-        <div className="grid lg:grid-cols-[1.2fr,1fr] gap-6 mb-6">
-          {/* ROADMAP */}
-
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-[#1d1d1f]">
-                Roadmap Progress
-              </h2>
-
-              <a
-                href="/road-map"
-                className="text-blue-600 font-semibold flex items-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                View Roadmap
-
-                <ArrowRight className="w-4 h-4" />
-              </a>
+        <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 mb-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-[#f3ecff] flex items-center justify-center">
+              <Sparkles className="w-5 h-5 text-purple-600" />
             </div>
-
-            <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-5">
-              Full Stack Developer
-            </h3>
-
-            <div className="flex items-center gap-4 mb-10">
-              <div className="flex-1 h-4 rounded-full bg-[#ece6dc] overflow-hidden">
-                <div className="w-[62%] h-full bg-[#d4a44d] rounded-full"></div>
-              </div>
-
-              <span className="text-2xl font-bold text-[#1d1d1f]">
-                62%
-              </span>
-            </div>
-
-            <div className="grid grid-cols-4 gap-5">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-6 h-6 text-green-600" />
-
-                <div>
-                  <h3 className="text-2xl font-bold text-[#1d1d1f]">
-                    12
-                  </h3>
-
-                  <p className="text-slate-500">Completed</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Bell className="w-6 h-6 text-blue-600" />
-
-                <div>
-                  <h3 className="text-2xl font-bold text-[#1d1d1f]">
-                    8
-                  </h3>
-
-                  <p className="text-slate-500">In Progress</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Clock3 className="w-6 h-6 text-orange-500" />
-
-                <div>
-                  <h3 className="text-2xl font-bold text-[#1d1d1f]">
-                    5
-                  </h3>
-
-                  <p className="text-slate-500">Pending</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Lock className="w-6 h-6 text-slate-500" />
-
-                <div>
-                  <h3 className="text-2xl font-bold text-[#1d1d1f]">
-                    3
-                  </h3>
-
-                  <p className="text-slate-500">Locked</p>
-                </div>
-              </div>
-            </div>
+            <h2 className="text-xl font-bold text-[#1d1d1f]">
+              Recommended Next Skills
+            </h2>
           </div>
-
-          {/* ACTIVITY */}
-
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold text-[#1d1d1f]">
-                Recent Activity
-              </h2>
-
-              <button className="text-blue-600 font-semibold flex items-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]">
-                View All
-
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-6">
-              {[
-                {
-                  title: "AI Analyzer report generated",
-                  desc: "Review your latest analysis",
-                  time: "2h ago",
-                },
-
-                {
-                  title: "Roadmap updated",
-                  desc: "3 new milestones added",
-                  time: "1d ago",
-                },
-
-                {
-                  title: "Mock interview completed",
-                  desc: "You scored 85%",
-                  time: "2d ago",
-                },
-
-                {
-                  title: "New project added",
-                  desc: "Capabl Platform",
-                  time: "3d ago",
-                },
-              ].map((item, index) => (
+          {analysis?.recommendedSkills?.length ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {analysis.recommendedSkills.map((s) => (
                 <div
-                  key={index}
-                  className="flex items-start justify-between"
+                  key={s}
+                  className="border border-[#e8e6e1] rounded-2xl px-4 py-3 flex items-center gap-3"
                 >
-                  <div className="flex gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#f5f1ea] flex items-center justify-center">
-                      <Sparkles className="w-5 h-5 text-[#c89a2b]" />
-                    </div>
-
-                    <div>
-                      <h3 className="font-semibold text-[#1d1d1f] mb-1">
-                        {item.title}
-                      </h3>
-
-                      <p className="text-slate-500">{item.desc}</p>
-                    </div>
+                  <div className="w-8 h-8 rounded-lg bg-[#f5f1ea] flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-[#b89968]" />
                   </div>
-
-                  <span className="text-sm text-slate-400">
-                    {item.time}
+                  <span className="font-medium text-[#1d1d1f] capitalize">
+                    {s}
                   </span>
                 </div>
               ))}
             </div>
-          </div>
+          ) : (
+            <p className="text-slate-400 text-sm">
+              No new skills recommended — you have great coverage.
+            </p>
+          )}
         </div>
 
-        {/* FOOTER */}
-
-        <div className="bg-[#f8f1e5] border border-[#ece3d3] rounded-[2rem] p-6 flex items-center justify-between">
-          <div className="flex items-center gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center">
-              <Rocket className="w-8 h-8 text-[#d4a44d]" />
+        <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-10 h-10 rounded-xl bg-[#fff0f5] flex items-center justify-center">
+              <Map className="w-5 h-5 text-pink-500" />
             </div>
-
-            <div>
-              <h2 className="text-2xl font-bold text-[#1d1d1f] mb-2">
-                Small progress leads to big success!
-              </h2>
-
-              <p className="text-slate-500 text-lg">
-                Keep learning, keep growing. You're doing great!
-              </p>
-            </div>
+            <h2 className="text-xl font-bold text-[#1d1d1f]">
+              Personalized Roadmap
+            </h2>
           </div>
+          {analysis?.roadmap?.length ? (
+            <div className="space-y-4">
+              {analysis.roadmap.map((w) => (
+                <div
+                  key={w.week}
+                  className="border border-[#e8e6e1] rounded-2xl p-5 flex items-center gap-5"
+                >
+                  <div className="w-14 h-14 rounded-2xl bg-[#1d1d1f] text-white flex items-center justify-center font-bold shrink-0">
+                    W{w.week}
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-[#1d1d1f] mb-1 capitalize">
+                      {w.goal}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {w.focus.map((f) => (
+                        <span
+                          key={f}
+                          className="px-2.5 py-1 rounded-full bg-[#f5f1ea] text-xs font-medium capitalize"
+                        >
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-slate-400 text-sm">
+              No roadmap available yet.
+            </p>
+          )}
         </div>
       </main>
     </div>

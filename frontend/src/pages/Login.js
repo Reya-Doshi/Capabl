@@ -8,6 +8,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import axios from "axios";
+import toast from "react-hot-toast";
 import { useState } from "react";
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -36,10 +37,12 @@ const handleLogin = async (e) => {
   JSON.stringify(data.user)
 );
 
+    toast.success("Welcome back");
+
     if (
       data.user?.college &&
-  data.user?.github &&
-  data.user?.linkedin
+  data.user?.careerGoal &&
+  data.user?.resume
     ) {
 
       window.location.href = "/dashboard";
@@ -50,13 +53,13 @@ const handleLogin = async (e) => {
 
         window.location.href = "/onboarding";
 
-      }, 100);
+      }, 400);
 
     }
 
   } catch (error) {
 
-    alert(
+    toast.error(
       error.response?.data?.message ||
       "Login failed"
     );

@@ -23,7 +23,10 @@ model User {
   linkedin        String?
 
   resume          String?
+  resumeName      String?
   profilePic      String?
+
+  careerGoal      String?
 
   createdAt       DateTime @default(now())
 
