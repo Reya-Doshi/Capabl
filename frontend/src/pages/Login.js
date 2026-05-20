@@ -234,29 +234,19 @@ const handleLogin = async (e) => {
 
             <div className="space-y-4">
 
-              <button className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-[#e8e6e1] font-semibold hover:bg-[#f7f5f2] transition-all">
+              <a
+  href="http://localhost:5000/api/auth/google"
+  className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-[#e8e6e1] font-semibold hover:bg-[#f7f5f2] transition-all"
+>
+  <img
+    src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
+    alt="Google"
+    className="w-5 h-5"
+  />
 
-                <img
-                  src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg"
-                  alt=""
-                  className="w-5 h-5"
-                />
-
-                Continue with Google
-
-              </button>
-
-              <button className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-[#e8e6e1] font-semibold hover:bg-[#f7f5f2] transition-all">
-
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/174/174857.png"
-                  alt=""
-                  className="w-5 h-5"
-                />
-
-                Continue with LinkedIn
-
-              </button>
+  Continue with Google
+</a>
+              
 
             </div>
 
@@ -353,14 +343,7 @@ onChange={(e) => setPassword(e.target.value)}
 
                 </label>
 
-                <a
-                  href="#"
-                  className="text-[13px] font-bold text-[#b89968] hover:underline"
-                >
-
-                  Forgot password?
-
-                </a>
+              
 
               </div>
 

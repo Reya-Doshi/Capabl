@@ -9,6 +9,7 @@ import About from "./pages/About";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Onboarding from "./pages/Onboarding";
+import GoogleSuccess from "./pages/GoogleSuccess";
 
 import Dashboard from "./student/Dashboard";
 import Analyzer from "./student/Analyzer";
@@ -135,6 +136,12 @@ export default function App() {
               <Settings />
             </ProtectedRoute>
           }
+        />
+        <Route 
+        path="/google-success" 
+        element={
+        <GoogleSuccess />
+        } 
         />
       </Routes>
     </BrowserRouter>
