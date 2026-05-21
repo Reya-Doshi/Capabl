@@ -7,7 +7,7 @@ import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import analysisRoutes from "./routes/analysisRoutes.js";
-
+import passport from "./config/passport.js";
 dotenv.config();
 
 const app = express();
@@ -15,7 +15,7 @@ const app = express();
 app.use(cors());
 
 app.use(express.json());
-
+app.use(passport.initialize());
 app.use(
   "/uploads",
   express.static(path.join(process.cwd(), "uploads"))
