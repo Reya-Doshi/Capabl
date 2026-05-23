@@ -7,6 +7,7 @@ import {
   scoreGithub,
   scoreLinkedIn,
 } from "./socialService.js";
+import { resourcesForSkill } from "./skillResources.js";
 
 const ROLE_SKILLS = {
   "full stack": [
@@ -154,87 +155,174 @@ function resolveRoleKey(careerGoal) {
   return DEFAULT_ROLE;
 }
 
-function buildRoadmap(skillGaps, careerFit) {
-  const stagesTemplate = [
-    {
-      stage: "Stage 1",
-      title: "Foundations",
-      core: ["git", "html", "css"],
-    },
-    {
-      stage: "Stage 2",
-      title: "Core Skills",
-      core: ["javascript", "react", "node", "express", "python"],
-    },
-    {
-      stage: "Stage 3",
-      title: "Advanced Concepts",
-      core: ["typescript", "rest api", "postgresql", "mongodb", "authentication"],
-    },
-    {
-      stage: "Stage 4",
-      title: "Real World Projects",
-      core: ["docker", "aws", "ci/cd", "dsa"],
-    },
-    {
-      stage: "Stage 5",
-      title: "Placement Ready",
-      core: ["system design", "interview prep", "portfolio"],
-    },
-  ];
+// Role-specific roadmap templates. Stage `core` lists are drawn from each
+// role's ROLE_SKILLS so the roadmap a user sees actually matches their goal.
+const ROADMAP_TEMPLATES = {
+  "full stack": [
+    { title: "Foundations", core: ["git", "html", "css"] },
+    { title: "Core Skills", core: ["javascript", "react", "node", "express"] },
+    { title: "Data & APIs", core: ["rest api", "mongodb", "postgresql", "typescript"] },
+    { title: "Real World Projects", core: ["dsa", "git", "rest api"] },
+    { title: "Placement Ready", core: ["system design", "interview prep", "portfolio"] },
+  ],
+  frontend: [
+    { title: "Foundations", core: ["git", "html", "css"] },
+    { title: "Core Skills", core: ["javascript", "react", "responsive design"] },
+    { title: "Modern Stack", core: ["typescript", "tailwind", "redux", "next.js"] },
+    { title: "Real World Projects", core: ["react", "rest api", "git"] },
+    { title: "Placement Ready", core: ["system design", "interview prep", "portfolio"] },
+  ],
+  backend: [
+    { title: "Foundations", core: ["git", "linux", "rest api"] },
+    { title: "Core Skills", core: ["node", "express", "authentication"] },
+    { title: "Databases & Caching", core: ["postgresql", "mongodb", "redis"] },
+    { title: "DevOps Basics", core: ["docker", "typescript", "rest api"] },
+    { title: "Placement Ready", core: ["system design", "interview prep", "portfolio"] },
+  ],
+  "ai engineer": [
+    { title: "Foundations", core: ["python", "math", "statistics"] },
+    { title: "Data Stack", core: ["numpy", "pandas"] },
+    { title: "Machine Learning", core: ["machine learning", "deep learning"] },
+    { title: "Advanced AI", core: ["tensorflow", "pytorch", "nlp"] },
+    { title: "Placement Ready", core: ["system design", "interview prep", "portfolio"] },
+  ],
+  "data scientist": [
+    { title: "Foundations", core: ["python", "statistics", "math"] },
+    { title: "Data Stack", core: ["pandas", "numpy", "sql"] },
+    { title: "Analysis & Viz", core: ["matplotlib", "tableau", "excel"] },
+    { title: "Modeling", core: ["machine learning"] },
+    { title: "Placement Ready", core: ["interview prep", "portfolio"] },
+  ],
+  "data analyst": [
+    { title: "Foundations", core: ["excel", "sql"] },
+    { title: "Programming", core: ["python", "pandas"] },
+    { title: "Visualization", core: ["power bi", "tableau", "data visualization"] },
+    { title: "Statistics", core: ["statistics"] },
+    { title: "Placement Ready", core: ["interview prep", "portfolio"] },
+  ],
+  devops: [
+    { title: "Foundations", core: ["linux", "bash", "git"] },
+    { title: "Containers", core: ["docker", "kubernetes"] },
+    { title: "Cloud", core: ["aws", "terraform"] },
+    { title: "Automation", core: ["ci/cd", "monitoring"] },
+    { title: "Placement Ready", core: ["system design", "interview prep", "portfolio"] },
+  ],
+  mobile: [
+    { title: "Foundations", core: ["javascript", "git"] },
+    { title: "Cross-Platform", core: ["react native", "flutter", "dart"] },
+    { title: "Native", core: ["swift", "kotlin"] },
+    { title: "Integration", core: ["rest api"] },
+    { title: "Placement Ready", core: ["interview prep", "portfolio"] },
+  ],
+};
 
-  const stages = stagesTemplate.map((s) => {
-    const gapSkills = s.core.filter((k) => skillGaps.includes(k));
-    const knownInStage = s.core.filter((k) => !skillGaps.includes(k));
-    let status = "locked";
-    if (gapSkills.length === 0 && knownInStage.length > 0) status = "completed";
-    else if (gapSkills.length > 0 && knownInStage.length > 0) status = "active";
-    else if (s.title === "Foundations") status = "active";
+// Source of truth for whether a skill is "known":
+//   - resumeSkills: parsed from the uploaded resume
+//   - profileSkills: skills the user listed in their profile
+//   - manualSkills:  skills the user explicitly marked complete on the roadmap
+// `sourceFor(skill)` returns whichever applies, in priority order, so the UI
+// can show "from resume" / "from profile" / "marked done" badges.
+function sourceFor(skill, { resumeSet, profileSet, manualSet }) {
+  if (manualSet.has(skill)) return "manual";
+  if (resumeSet.has(skill)) return "resume";
+  if (profileSet.has(skill)) return "profile";
+  return null;
+}
 
-    const progress = s.core.length
-      ? Math.round((knownInStage.length / s.core.length) * 100)
-      : 0;
+function buildRoadmap(
+  careerFit,
+  roleKey,
+  { resumeSkills, profileSkills, manualSkills, weeklyDone }
+) {
+  const tpl =
+    ROADMAP_TEMPLATES[roleKey] || ROADMAP_TEMPLATES["full stack"];
+
+  const resumeSet = new Set((resumeSkills || []).map((s) => s.toLowerCase()));
+  const profileSet = new Set((profileSkills || []).map((s) => s.toLowerCase()));
+  const manualSet = new Set((manualSkills || []).map((s) => s.toLowerCase()));
+  const knownSet = new Set([...resumeSet, ...profileSet, ...manualSet]);
+
+  // First pass: shape stages with per-skill `known` + `source` + `resources`.
+  const stages = tpl.map((s, i) => {
+    const skills = s.core.map((name) => {
+      const known = knownSet.has(name);
+      return {
+        name,
+        known,
+        source: known
+          ? sourceFor(name, { resumeSet, profileSet, manualSet })
+          : null,
+        resources: resourcesForSkill(name),
+      };
+    });
+    const knownCount = skills.filter((x) => x.known).length;
+    const total = skills.length;
+    const progress = total ? Math.round((knownCount / total) * 100) : 0;
 
     return {
-      ...s,
-      skills: s.core,
-      knownSkills: knownInStage,
-      gapSkills,
+      stage: `Stage ${i + 1}`,
+      title: s.title,
+      skills,
+      knownSkills: skills.filter((x) => x.known).map((x) => x.name),
+      gapSkills: skills.filter((x) => !x.known).map((x) => x.name),
+      knownCount,
+      total,
       progress,
-      status,
+      status: "locked", // resolved in second pass
     };
   });
 
-  let activated = false;
-  for (const s of stages) {
-    if (s.status === "completed") continue;
-    if (!activated) {
-      s.status = "active";
-      activated = true;
+  // Sequential gating: Stage N is only ever `active` or `completed` if Stage
+  // N-1 is `completed`. This is the Duolingo-style behavior — even if the
+  // user happens to have all Stage 5 skills, Stage 5 stays locked until
+  // Stages 1-4 are fully done.
+  let prevCompleted = true; // first stage is always unlocked
+  for (const stage of stages) {
+    if (!prevCompleted) {
+      stage.status = "locked";
+      continue;
+    }
+    if (stage.total > 0 && stage.knownCount === stage.total) {
+      stage.status = "completed";
+      // prevCompleted stays true — next stage can unlock too
     } else {
-      s.status = "locked";
+      stage.status = "active";
+      prevCompleted = false;
     }
   }
 
-  const weeks = [];
+  // Weekly plan: 2 gap-skills per week, in priority order (fundamentals first).
+  // Only show weeks for skills the user does NOT yet know.
+  const allGaps = stages.flatMap((s) => s.gapSkills);
+  const uniqueGaps = Array.from(new Set(allGaps));
   const fundamentals = ["git", "html", "css", "javascript", "dsa"];
   const ordered = [
-    ...fundamentals.filter((s) => skillGaps.includes(s)),
-    ...skillGaps.filter((s) => !fundamentals.includes(s)),
+    ...fundamentals.filter((s) => uniqueGaps.includes(s)),
+    ...uniqueGaps.filter((s) => !fundamentals.includes(s)),
   ];
-  const target = ordered.length > 0 ? ordered : skillGaps;
 
+  const doneKeys = new Set(
+    (weeklyDone || []).map((w) => `${w.week}::${w.taskKey}`)
+  );
+
+  const weeks = [];
   let week = 1;
-  for (let i = 0; i < target.length; i += 2) {
-    const focus = target.slice(i, i + 2);
+  for (let i = 0; i < ordered.length; i += 2) {
+    const focusNames = ordered.slice(i, i + 2);
+    const tasks = focusNames.map((name) => ({
+      key: name,
+      label: `Study and build a small project with ${name}`,
+      done: doneKeys.has(`${week}::${name}`) || knownSet.has(name),
+    }));
     weeks.push({
       week,
       title: `Week ${week}`,
-      focus,
+      focus: focusNames,
+      tasks,
       goal:
-        focus.length > 1
-          ? `Learn ${focus[0]} and ${focus[1]}`
-          : `Master ${focus[0]}`,
+        focusNames.length > 1
+          ? `Learn ${focusNames[0]} and ${focusNames[1]}`
+          : `Master ${focusNames[0]}`,
     });
     week += 1;
     if (week > 8) break;
@@ -245,6 +333,13 @@ function buildRoadmap(skillGaps, careerFit) {
       week: 1,
       title: "Week 1",
       focus: ["portfolio polish"],
+      tasks: [
+        {
+          key: "portfolio polish",
+          label: `Build a portfolio project showcasing ${careerFit}`,
+          done: doneKeys.has(`1::portfolio polish`),
+        },
+      ],
       goal: `Build a portfolio project showcasing ${careerFit}`,
     });
   }
@@ -259,13 +354,18 @@ export async function runAnalysis({
   resumePath,
   githubUrl,
   linkedinUrl,
+  manualSkills = [],
+  weeklyProgress = [],
 }) {
   const roleKey = resolveRoleKey(careerGoal || user?.careerGoal);
   const required = ROLE_SKILLS[roleKey];
 
-  const userSkills = new Set(
-    (skills || []).map(normaliseSkill).filter(Boolean)
-  );
+  const profileSkills = (skills || [])
+    .map(normaliseSkill)
+    .filter(Boolean);
+  const manualSkillList = (manualSkills || [])
+    .map(normaliseSkill)
+    .filter(Boolean);
 
   let resumeAnalysis = {
     ok: false,
@@ -281,11 +381,17 @@ export async function runAnalysis({
   if (resumePath) {
     const resumeText = await extractResumeText(resumePath);
     resumeAnalysis = analyzeResumeText(resumeText, required);
-    for (const fs of resumeAnalysis.foundSkills) {
-      userSkills.add(normaliseSkill(fs));
-    }
   }
 
+  const resumeSkillList = (resumeAnalysis.foundSkills || []).map(
+    normaliseSkill
+  );
+
+  const userSkills = new Set([
+    ...profileSkills,
+    ...resumeSkillList,
+    ...manualSkillList,
+  ]);
   const userSkillList = Array.from(userSkills);
 
   const strengths = required.filter((s) => userSkills.has(s));
@@ -343,8 +449,14 @@ export async function runAnalysis({
       .join(" ") + " Developer";
 
   const { weeks: roadmap, stages: roadmapStages } = buildRoadmap(
-    gaps,
-    careerFit
+    careerFit,
+    roleKey,
+    {
+      resumeSkills: resumeSkillList,
+      profileSkills,
+      manualSkills: manualSkillList,
+      weeklyDone: weeklyProgress,
+    }
   );
 
   const strengthsText = [];
