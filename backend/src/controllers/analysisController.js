@@ -44,6 +44,28 @@ async function persistAnalysis(userId, result, hasResume) {
   });
 }
 
+async function loadManualProgress(userId) {
+  try {
+    const [skills, weekly] = await Promise.all([
+      prisma.skillProgress.findMany({
+        where: { userId },
+        select: { skillName: true },
+      }),
+      prisma.weeklyTaskProgress.findMany({
+        where: { userId },
+        select: { week: true, taskKey: true },
+      }),
+    ]);
+    return {
+      manualSkills: skills.map((s) => s.skillName),
+      weeklyProgress: weekly,
+    };
+  } catch {
+    // Tables may not exist yet (migration pending). Fall back gracefully.
+    return { manualSkills: [], weeklyProgress: [] };
+  }
+}
+
 export const getAnalysis = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -56,6 +78,8 @@ export const getAnalysis = async (req, res) => {
     if (!user)
       return res.status(404).json({ message: "User not found" });
 
+    const { manualSkills, weeklyProgress } = await loadManualProgress(userId);
+
     const analysis = await runAnalysis({
       user,
       skills: user.skills.map((s) => s.name),
@@ -63,6 +87,8 @@ export const getAnalysis = async (req, res) => {
       resumePath: user.resume,
       githubUrl: user.github,
       linkedinUrl: user.linkedin,
+      manualSkills,
+      weeklyProgress,
     });
 
     res.status(200).json({
@@ -88,6 +114,8 @@ export const refreshAnalysis = async (req, res) => {
     if (!user)
       return res.status(404).json({ message: "User not found" });
 
+    const { manualSkills, weeklyProgress } = await loadManualProgress(userId);
+
     const result = await runAnalysis({
       user,
       skills: user.skills.map((s) => s.name),
@@ -95,6 +123,8 @@ export const refreshAnalysis = async (req, res) => {
       resumePath: user.resume,
       githubUrl: user.github,
       linkedinUrl: user.linkedin,
+      manualSkills,
+      weeklyProgress,
     });
 
     await persistAnalysis(userId, result, Boolean(user.resume));

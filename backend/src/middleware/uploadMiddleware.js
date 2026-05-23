@@ -8,6 +8,27 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+const allowed = new Set([".pdf", ".doc", ".docx"]);
+
+function removeExistingResumesForUser(userId) {
+  if (userId === "anon") return;
+  try {
+    const files = fs.readdirSync(uploadDir);
+    const prefix = `user${userId}_`;
+    for (const f of files) {
+      if (f.startsWith(prefix)) {
+        try {
+          fs.unlinkSync(path.join(uploadDir, f));
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+  } catch {
+    /* directory missing */
+  }
+}
+
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadDir);
@@ -15,20 +36,10 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => {
     const userId = req.user?.id ?? "anon";
     const ext = path.extname(file.originalname).toLowerCase();
-    const safeBase = path
-      .basename(file.originalname, ext)
-      .replace(/[^a-zA-Z0-9_-]/g, "_")
-      .slice(0, 40);
-    const stamp = Date.now();
-    cb(null, `user${userId}_${stamp}_${safeBase}${ext}`);
+    removeExistingResumesForUser(userId);
+    cb(null, `user${userId}_resume${ext}`);
   },
 });
-
-const allowed = new Set([
-  ".pdf",
-  ".doc",
-  ".docx",
-]);
 
 const fileFilter = (req, file, cb) => {
   const ext = path.extname(file.originalname).toLowerCase();

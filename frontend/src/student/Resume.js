@@ -162,17 +162,17 @@ export default function Resume() {
         </button>
       </aside>
 
-      <main className="flex-1 lg:ml-[270px] p-8 lg:p-12">
-        <div className="flex items-center justify-between mb-10">
+      <main className="flex-1 lg:ml-[270px] p-6 sm:p-8 lg:p-12 max-w-[1400px] w-full mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-10">
           <div>
-            <h1 className="text-4xl font-bold text-[#1d1d1f] mb-3">
+            <h1 className="text-3xl sm:text-4xl font-bold text-[#1d1d1f] mb-2">
               Resume
             </h1>
-            <p className="text-slate-500 text-lg font-medium">
+            <p className="text-slate-500 text-base sm:text-lg font-medium">
               Build, optimize and analyze your resume to stand out.
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <div className="w-12 h-12 rounded-full bg-[#77410e] flex items-center justify-center text-white font-bold text-lg">
               {(userInfo?.name || "U").charAt(0).toUpperCase()}
             </div>
@@ -183,7 +183,7 @@ export default function Resume() {
           </div>
         </div>
 
-        <div className="bg-white border border-dashed border-[#ddd3c4] rounded-[2rem] p-8 mb-8 flex flex-col items-center text-center">
+        <div className="bg-white border border-dashed border-[#ddd3c4] rounded-[2rem] p-6 sm:p-8 mb-8 flex flex-col items-center text-center">
           <div className="w-16 h-16 rounded-full bg-[#f7f1e7] flex items-center justify-center mb-4">
             <Upload className="w-8 h-8 text-[#c89a2b]" />
           </div>
@@ -229,19 +229,19 @@ export default function Resume() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-[1.2fr,0.8fr] gap-6">
-          <div className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-5">
+        <div className="grid lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] gap-6 items-start">
+          <div className="space-y-6 min-w-0">
+            <div className="grid sm:grid-cols-2 gap-5">
               <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
-                <div className="flex items-center justify-between mb-5">
-                  <div>
+                <div className="flex items-center justify-between mb-5 gap-3">
+                  <div className="min-w-0">
                     <p className="text-slate-500 font-medium mb-2">Resume Score</p>
-                    <h2 className="text-5xl font-bold text-[#1d1d1f]">
+                    <h2 className="text-4xl sm:text-5xl font-bold text-[#1d1d1f]">
                       {resumeScore}%
                     </h2>
                   </div>
-                  <div className="w-16 h-16 rounded-2xl bg-[#edf8ef] flex items-center justify-center">
-                    <CheckCircle2 className="w-8 h-8 text-green-600" />
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#edf8ef] flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" />
                   </div>
                 </div>
                 <div className="w-full h-3 rounded-full bg-[#f1f1f1] overflow-hidden">
@@ -261,17 +261,17 @@ export default function Resume() {
               </div>
 
               <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
-                <div className="flex items-center justify-between mb-5">
-                  <div>
+                <div className="flex items-center justify-between mb-5 gap-3">
+                  <div className="min-w-0">
                     <p className="text-slate-500 font-medium mb-2">
                       ATS Compatibility
                     </p>
-                    <h2 className="text-5xl font-bold text-[#1d1d1f]">
+                    <h2 className="text-4xl sm:text-5xl font-bold text-[#1d1d1f]">
                       {atsScore}%
                     </h2>
                   </div>
-                  <div className="w-16 h-16 rounded-2xl bg-[#fff3df] flex items-center justify-center">
-                    <Search className="w-8 h-8 text-[#c89a2b]" />
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-[#fff3df] flex items-center justify-center shrink-0">
+                    <Search className="w-7 h-7 sm:w-8 sm:h-8 text-[#c89a2b]" />
                   </div>
                 </div>
                 <div className="w-full h-3 rounded-full bg-[#f1f1f1] overflow-hidden">
@@ -457,7 +457,7 @@ export default function Resume() {
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6 min-w-0 lg:sticky lg:top-6 self-start">
             <div className="bg-white border border-[#e8e6e1] rounded-[2rem] overflow-hidden">
               <div className="px-6 py-5 border-b border-[#f1f1f1] flex items-center justify-between">
                 <div>
@@ -487,19 +487,21 @@ export default function Resume() {
                     <h1 className="text-2xl font-bold text-[#1d1d1f] mb-3">
                       {userInfo?.name}
                     </h1>
-                    <div className="space-y-2 text-slate-500 text-sm mb-6">
-                      <div className="flex items-center gap-2">
-                        <Mail className="w-4 h-4" />
-                        {resume?.contact?.email || userInfo?.email}
+                    <div className="space-y-2 text-slate-500 text-sm mb-6 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Mail className="w-4 h-4 shrink-0" />
+                        <span className="truncate">
+                          {resume?.contact?.email || userInfo?.email}
+                        </span>
                       </div>
                       {resume?.contact?.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-4 h-4" />
-                          {resume.contact.phone}
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Phone className="w-4 h-4 shrink-0" />
+                          <span className="truncate">{resume.contact.phone}</span>
                         </div>
                       )}
                       {resume?.contact?.urls?.slice(0, 3).map((u) => (
-                        <div key={u} className="flex items-center gap-2 truncate">
+                        <div key={u} className="flex items-center gap-2 min-w-0">
                           <LinkIcon className="w-4 h-4 shrink-0" />
                           <span className="truncate">{u}</span>
                         </div>

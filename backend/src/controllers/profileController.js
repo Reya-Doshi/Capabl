@@ -1,6 +1,27 @@
 import prisma from "../config/db.js";
 import { runAnalysis } from "../services/analysisService.js";
 
+async function loadManualProgress(userId) {
+  try {
+    const [skills, weekly] = await Promise.all([
+      prisma.skillProgress.findMany({
+        where: { userId },
+        select: { skillName: true },
+      }),
+      prisma.weeklyTaskProgress.findMany({
+        where: { userId },
+        select: { week: true, taskKey: true },
+      }),
+    ]);
+    return {
+      manualSkills: skills.map((s) => s.skillName),
+      weeklyProgress: weekly,
+    };
+  } catch {
+    return { manualSkills: [], weeklyProgress: [] };
+  }
+}
+
 const parseSkills = (raw) => {
   if (!raw) return [];
   if (Array.isArray(raw))
@@ -93,6 +114,8 @@ export const upsertProfile = async (req, res) => {
       include: { skills: true },
     });
 
+    const { manualSkills, weeklyProgress } = await loadManualProgress(userId);
+
     const analysisResult = await runAnalysis({
       user: fullUser,
       skills: fullUser.skills.map((s) => s.name),
@@ -100,6 +123,8 @@ export const upsertProfile = async (req, res) => {
       resumePath: fullUser.resume,
       githubUrl: fullUser.github,
       linkedinUrl: fullUser.linkedin,
+      manualSkills,
+      weeklyProgress,
     });
 
     await persistAnalysis(userId, analysisResult, Boolean(fullUser.resume));
@@ -157,6 +182,8 @@ export const uploadResume = async (req, res) => {
       include: { skills: true },
     });
 
+    const { manualSkills, weeklyProgress } = await loadManualProgress(userId);
+
     const analysisResult = await runAnalysis({
       user: fullUser,
       skills: fullUser.skills.map((s) => s.name),
@@ -164,6 +191,8 @@ export const uploadResume = async (req, res) => {
       resumePath: fullUser.resume,
       githubUrl: fullUser.github,
       linkedinUrl: fullUser.linkedin,
+      manualSkills,
+      weeklyProgress,
     });
 
     await persistAnalysis(userId, analysisResult, true);
