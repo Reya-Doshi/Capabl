@@ -47,23 +47,75 @@ model InterviewSession {
 
   id              Int      @id @default(autoincrement())
 
-  topic           String
+  // -------------------------------------------------------------------------
+  // Type taxonomy (purpose × role × stage × medium × format)
+  //   purpose: screening | technical | behavioral | situational | case |
+  //            cultural-fit | competency | stress
+  //   role:    coding | portfolio | presentation | working |
+  //            resume-discussion | dsa | standard
+  //   stage:   first | second | final
+  //   medium:  ai | video | phone
+  //   format:  one-on-one | panel | sequential
+  // -------------------------------------------------------------------------
+  purpose         String   @default("technical")
+  role            String   @default("standard")
+  stage           String   @default("first")
+  medium          String   @default("ai")
+  format          String   @default("one-on-one")
+
   level           String   @default("medium")
-  durationKey     String   @default("medium")
-  totalQuestions  Int      @default(5)
+  totalQuestions  Int      @default(6)
 
-  status          String   @default("active")
+  // -------------------------------------------------------------------------
+  // Session state
+  //   status: scheduled | in_progress | finished | abandoned
+  //   mode:   voice (Retell) | text (fallback when no RETELL_API_KEY)
+  // -------------------------------------------------------------------------
+  status          String   @default("scheduled")
+  mode            String   @default("text")
 
+  // Personalisation snapshot — captured at start so re-running analytics is
+  // deterministic even if the user's profile changes later.
+  contextSnapshot Json?
+  agentPrompt     String?
+  careerFit       String?
+  interviewerName String?  @default("Rexa")
+
+  // Retell integration
+  retellCallId    String?  @unique
+  retellAgentId   String?
+  voiceProvider   String?
+
+  // Conversation data
+  //   transcript: raw turns from voice call [{ role, text, ts }]
+  //   turns:      logical Q-A pairs with per-turn evaluation
+  //               [{ question, answer, feedback, dims:{tech,comm,prob,conf,clar,fit} }]
   transcript      Json?
+  turns           Json?
 
-  score           Int?
+  // -------------------------------------------------------------------------
+  // Evaluation (6-dimension rubric with weights tech 30 / comm 25 / prob 20 /
+  // conf 10 / clar 10 / fit 5)
+  // -------------------------------------------------------------------------
+  score                Int?
+  technicalScore       Int?
+  communicationScore   Int?
+  problemSolvingScore  Int?
+  confidenceScore      Int?
+  clarityScore         Int?
+  culturalFitScore     Int?
+
   strengths       String[]
   weaknesses      String[]
+  skillGaps       String[]
   advice          String[]
+  improvementPlan String[]
   summary         String?
+  readinessScore  Int?
 
   startedAt       DateTime @default(now())
   finishedAt      DateTime?
+  durationSeconds Int?
 
   userId          Int
   user            User     @relation(fields: [userId], references: [id])

@@ -5,7 +5,7 @@ const protect = async (req, res, next) => {
 
   let token;
 
-  console.log(req.headers.authorization);
+  console.log("Auth middleware triggered");
 
   if (
     req.headers.authorization &&
