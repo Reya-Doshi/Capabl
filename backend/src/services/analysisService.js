@@ -523,6 +523,62 @@ export async function runAnalysis({
       description: `Resume is only ${resumeAnalysis.wordCount} words — add measurable bullet points to projects/experience.`,
     });
 
+  // Per-skill proficiency with evidence — used by the Skill Gap page so the
+  // gap % is grounded in real signals (resume / profile / GitHub / completed
+  // roadmap stages) instead of synthetic stage-index math.
+  const githubLangs = new Set(
+    Object.keys(githubProfile?.languageBytes || {}).map((l) =>
+      normaliseSkill(l)
+    )
+  );
+
+  const skillProficiency = required.map((skill) => {
+    const inProfile = profileSkills.includes(skill);
+    const inResume = resumeSkillList.includes(skill);
+    const inManual = manualSkillList.includes(skill);
+    const inGithub = githubLangs.has(skill);
+
+    // Evidence sources — each one adds a confidence point.
+    const evidence = [];
+    if (inResume) evidence.push("resume");
+    if (inProfile) evidence.push("profile");
+    if (inGithub) evidence.push("github");
+    if (inManual) evidence.push("completed");
+
+    let level, currentPct, gapPct;
+    if (evidence.length >= 3) {
+      level = "Confident";
+      currentPct = 95;
+      gapPct = 0;
+    } else if (evidence.length === 2) {
+      level = "Confident";
+      currentPct = 80;
+      gapPct = 5;
+    } else if (evidence.length === 1) {
+      level = "Practising";
+      currentPct = 55;
+      gapPct = 35;
+    } else {
+      level = "Beginner";
+      currentPct = 10;
+      gapPct = 90;
+    }
+
+    // Boost if the user has any project that lists this skill in its tech.
+    // (Read from AIAnalysis if available — handled at the controller layer
+    // since we don't have direct DB access here.)
+
+    return {
+      name: skill,
+      level,
+      currentPct,
+      targetPct: 100,
+      gapPct,
+      evidence,
+      known: evidence.length > 0,
+    };
+  });
+
   return {
     careerFit,
     targetRole: roleKey,
@@ -535,6 +591,7 @@ export async function runAnalysis({
     recommendedSkills,
     extractedSkills: userSkillList,
     requiredSkills: required,
+    skillProficiency,
     roadmap,
     roadmapStages,
     resume: {
