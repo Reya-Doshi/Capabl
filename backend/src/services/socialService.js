@@ -4,12 +4,20 @@ const LINKEDIN_SLUG_RE = /linkedin\.com\/in\/([A-Za-z0-9-_]{3,100})\/?/i;
 const GITHUB_HEADERS = {
   "User-Agent": "Capabl-AI-Analyzer",
   Accept: "application/vnd.github+json",
+  ...(process.env.GITHUB_TOKEN
+    ? {
+        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+      }
+    : {}),
 };
 
 export function extractGithubUsername(url) {
   if (!url) return null;
-  const m = String(url).match(GITHUB_USERNAME_RE);
-  return m ? m[1] : null;
+  const raw = String(url).trim().replace(/\/$/, "");
+  const m = raw.match(GITHUB_USERNAME_RE);
+  if (m && m[1]) return m[1];
+  if (!raw.includes("/")) return raw.replace(/^@/, "") || null;
+  return null;
 }
 
 export function extractLinkedInSlug(url) {
@@ -21,8 +29,47 @@ export function extractLinkedInSlug(url) {
 async function safeFetchJson(url) {
   try {
     const r = await fetch(url, { headers: GITHUB_HEADERS });
+    console.log("GitHub rate limit remaining:", r.headers.get("x-ratelimit-remaining"));
+    console.log("GitHub rate limit reset:", r.headers.get("x-ratelimit-reset"));
+
+    if (r.status === 403) {
+      console.error("GitHub API rate limit exceeded");
+      return { ok: false, status: r.status, headers: r.headers, data: null };
+    }
+
+    if (r.status === 404) {
+      console.error("GitHub username not found");
+      return { ok: false, status: r.status, headers: r.headers, data: null };
+    }
+
+    if (!r.ok) {
+      return { ok: false, status: r.status, headers: r.headers, data: null };
+    }
+
+    return { ok: true, status: r.status, headers: r.headers, data: await r.json() };
+  } catch {
+    return { ok: false, status: null, headers: null, data: null };
+  }
+}
+
+async function safeFetchText(url) {
+  try {
+    const r = await fetch(url, {
+      headers: {
+        ...GITHUB_HEADERS,
+        Accept: "application/vnd.github.raw",
+      },
+    });
+    if (r.status === 403) {
+      console.error("GitHub API rate limit exceeded");
+      return null;
+    }
+    if (r.status === 404) {
+      console.error("GitHub username not found");
+      return null;
+    }
     if (!r.ok) return null;
-    return await r.json();
+    return await r.text();
   } catch {
     return null;
   }
@@ -33,31 +80,38 @@ export async function fetchGithubProfile(url) {
   if (!username) {
     return {
       ok: false,
-      reason: "Invalid GitHub URL",
+      reason: "Invalid GitHub username or URL",
       url,
     };
   }
 
-  const profile = await safeFetchJson(
+  const profileResult = await safeFetchJson(
     `https://api.github.com/users/${encodeURIComponent(username)}`
   );
 
-  if (!profile || !profile.login) {
+  if (!profileResult?.ok || !profileResult?.data?.login) {
     return {
       ok: false,
-      reason: "GitHub user not found or rate-limited",
+      reason:
+        profileResult?.status === 403
+          ? "GitHub API rate limit exceeded"
+          : profileResult?.status === 404
+          ? "GitHub user not found"
+          : "GitHub user not found or rate-limited",
       username,
       url,
     };
   }
 
-  const repos = await safeFetchJson(
+  const profile = profileResult.data;
+
+  const reposResult = await safeFetchJson(
     `https://api.github.com/users/${encodeURIComponent(
       username
     )}/repos?per_page=100&sort=updated`
   );
 
-  const repoList = Array.isArray(repos) ? repos : [];
+  const repoList = Array.isArray(reposResult?.data) ? reposResult.data : [];
   const ownRepos = repoList.filter((r) => !r.fork);
 
   const totalStars = ownRepos.reduce(
@@ -90,7 +144,44 @@ export async function fetchGithubProfile(url) {
       language: r.language,
       stars: r.stargazers_count || 0,
       url: r.html_url,
+      forks: r.forks_count || 0,
+      openIssues: r.open_issues_count || 0,
+      pushedAt: r.pushed_at || r.updated_at || null,
+      size: r.size || 0,
+      homepage: r.homepage || null,
+      archived: Boolean(r.archived),
+      license: r.license?.spdx_id || r.license?.name || null,
+      repoUrl: r.html_url,
+      languagesUrl: r.languages_url,
     }));
+
+  const detailedTopRepos = await Promise.all(
+    topRepos.map(async (repo) => {
+      const [languageMapResult, readme, repoTopicsResult] = await Promise.all([
+        safeFetchJson(repo.languagesUrl),
+        safeFetchText(`${repo.repoUrl}/readme`),
+        safeFetchJson(`${repo.repoUrl}/topics`, {
+          Accept: "application/vnd.github+json",
+        }),
+      ]);
+
+      const languageMap = languageMapResult?.data;
+      const repoTopics = repoTopicsResult?.data;
+
+      const languageEntries = languageMap ? Object.entries(languageMap) : [];
+      const languages = languageEntries
+        .sort((a, b) => b[1] - a[1])
+        .map(([name]) => name)
+        .filter(Boolean);
+
+      return {
+        ...repo,
+        languages,
+        topics: Array.isArray(repoTopics?.names) ? repoTopics.names : [],
+        readme: readme || "",
+      };
+    })
+  );
 
   return {
     ok: true,
@@ -105,7 +196,7 @@ export async function fetchGithubProfile(url) {
     ownRepoCount: ownRepos.length,
     totalStars,
     topLanguages,
-    topRepos,
+    topRepos: detailedTopRepos,
     accountCreated: profile.created_at,
     htmlUrl: profile.html_url,
   };
