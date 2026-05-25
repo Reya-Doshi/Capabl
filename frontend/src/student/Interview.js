@@ -15,7 +15,6 @@ import {
   User,
   Settings,
   PlayCircle,
-  CheckCircle2,
   Mic,
   MicOff,
   PhoneOff,
@@ -23,12 +22,8 @@ import {
   X,
   Send,
   Sparkles,
-  Award,
   History,
   LogOut,
-  Activity,
-  TrendingUp,
-  Target,
   Zap,
   Volume2,
   Info,
@@ -423,7 +418,6 @@ export default function Interview() {
   const levels = catalog?.levels || ["easy", "medium", "hard"];
 
   const voiceStatus = meta?.voice || { available: false };
-  const performance = meta?.performance || {};
 
   // -------------------- LIVE VOICE VIEW -----------------------------------
   if (view === "live-voice") {
@@ -610,14 +604,6 @@ export default function Interview() {
           </div>
         )}
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-          <StatCard icon={Award} color="text-[#c89a2b]" label="Best score" value={performance.bestScore || 0} />
-          <StatCard icon={TrendingUp} color="text-green-500" label="Average" value={performance.avgScore || 0} />
-          <StatCard icon={CheckCircle2} color="text-blue-500" label="Interviews" value={performance.interviewsTaken || 0} />
-          <StatCard icon={Target} color="text-purple-500" label="Readiness" value={performance.latestReadiness ?? "—"} />
-        </div>
-
         {/* Picker */}
         <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-7 mb-8">
           <h2 className="text-2xl font-bold text-[#1d1d1f] mb-1">Configure your interview</h2>
@@ -700,34 +686,6 @@ export default function Interview() {
           </button>
         </div>
 
-        {/* Performance heatmaps */}
-        {performance.interviewsTaken > 0 && (
-          <div className="grid lg:grid-cols-2 gap-6 mb-8">
-            <DimensionHeatmap dimensions={performance.dimensions || {}} />
-            <TrendChart trend={performance.trend || []} />
-          </div>
-        )}
-
-        {performance.interviewsTaken > 0 && (
-          <div className="grid lg:grid-cols-3 gap-6 mb-8">
-            <TallyCard
-              title="Strength heatmap"
-              items={performance.strengthsHeatmap || []}
-              tone="strength"
-            />
-            <TallyCard
-              title="Weakness heatmap"
-              items={performance.weaknessesHeatmap || []}
-              tone="weakness"
-            />
-            <TallyCard
-              title="Recurring skill gaps"
-              items={performance.skillGapsHeatmap || []}
-              tone="gap"
-            />
-          </div>
-        )}
-
         {/* History */}
         <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-7">
           <div className="flex items-center gap-3 mb-6">
@@ -796,16 +754,6 @@ export default function Interview() {
 // Sub-components
 // =============================================================================
 
-function StatCard({ icon: Icon, color, label, value }) {
-  return (
-    <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
-      <Icon className={`w-9 h-9 ${color} mb-4`} />
-      <p className="text-sm text-slate-500 mb-1">{label}</p>
-      <h2 className="text-3xl font-bold text-[#1d1d1f]">{value}</h2>
-    </div>
-  );
-}
-
 function Section({ title, subtitle, children }) {
   return (
     <div className="mb-6">
@@ -866,99 +814,6 @@ function SmallPicker({ label, items, value, onChange }) {
           </button>
         ))}
       </div>
-    </div>
-  );
-}
-
-function DimensionHeatmap({ dimensions }) {
-  const entries = Object.keys(DIM_LABELS).map((k) => ({
-    key: k,
-    label: DIM_LABELS[k],
-    val: dimensions[k] || 0,
-  }));
-  return (
-    <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
-      <div className="flex items-center gap-2 mb-5">
-        <Activity className="w-5 h-5 text-[#c89a2b]" />
-        <h3 className="text-lg font-bold text-[#1d1d1f]">Dimension breakdown</h3>
-      </div>
-      <div className="space-y-3">
-        {entries.map((e) => (
-          <div key={e.key}>
-            <div className="flex justify-between text-sm mb-1">
-              <span className="text-slate-600">{e.label}</span>
-              <span className="font-bold text-[#1d1d1f]">{e.val}</span>
-            </div>
-            <div className="w-full h-2 rounded-full bg-[#ececec] overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all duration-1000 ${
-                  e.val >= 70
-                    ? "bg-green-500"
-                    : e.val >= 40
-                    ? "bg-orange-400"
-                    : "bg-red-400"
-                }`}
-                style={{ width: `${e.val}%` }}
-              ></div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TrendChart({ trend }) {
-  if (!trend.length) return null;
-  const max = 100;
-  return (
-    <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
-      <div className="flex items-center gap-2 mb-5">
-        <TrendingUp className="w-5 h-5 text-green-500" />
-        <h3 className="text-lg font-bold text-[#1d1d1f]">Performance trend</h3>
-      </div>
-      <div className="flex items-end gap-2 h-40">
-        {trend.map((t, i) => (
-          <div key={t.id} className="flex-1 flex flex-col items-center gap-1">
-            <div
-              className="w-full bg-[#c89a2b] rounded-t-md transition-all"
-              style={{ height: `${(t.score / max) * 100}%`, minHeight: 3 }}
-              title={`${t.purpose}: ${t.score}/100`}
-            ></div>
-            <span className="text-[10px] text-slate-400">{i + 1}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TallyCard({ title, items, tone }) {
-  const colorMap = {
-    strength: "bg-[#e7f7ea] text-green-700",
-    weakness: "bg-[#fff0ed] text-red-600",
-    gap: "bg-[#fff3df] text-[#c89a2b]",
-  };
-  return (
-    <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6">
-      <h3 className="text-lg font-bold text-[#1d1d1f] mb-4">{title}</h3>
-      {items.length === 0 ? (
-        <p className="text-sm text-slate-400">No data yet.</p>
-      ) : (
-        <div className="space-y-2">
-          {items.map((it) => (
-            <div
-              key={it.label}
-              className="flex justify-between items-center px-3 py-2 rounded-xl hover:bg-[#faf8f4]"
-            >
-              <span className="text-sm text-slate-700 capitalize">{it.label}</span>
-              <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${colorMap[tone]}`}>
-                ×{it.count}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
