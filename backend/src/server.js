@@ -9,6 +9,7 @@ import profileRoutes from "./routes/profileRoutes.js";
 import analysisRoutes from "./routes/analysisRoutes.js";
 import progressRoutes from "./routes/progressRoutes.js";
 import interviewRoutes from "./routes/interviewRoutes.js";
+import projectsRoutes from "./routes/projectsRoutes.js";
 import passport from "./config/passport.js";
 dotenv.config();
 
@@ -38,6 +39,8 @@ app.use("/api/analysis", analysisRoutes);
 app.use("/api/progress", progressRoutes);
 
 app.use("/api/interviews", interviewRoutes);
+
+app.use("/api/projects", projectsRoutes);
 
 const PORT = process.env.PORT || 5000;
 
