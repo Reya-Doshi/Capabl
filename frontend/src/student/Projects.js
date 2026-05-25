@@ -43,6 +43,8 @@ export default function Projects() {
 
   const [activeFilter, setActiveFilter] = useState("all");
 
+  const [searchTerm, setSearchTerm] = useState("");
+
   useEffect(() => {
 
     const fetchProjects = async () => {
@@ -98,6 +100,16 @@ export default function Projects() {
 
   const filteredProjects = projects.filter(
     (project) => {
+
+      const matchesSearch =
+        !searchTerm ||
+        `${project.title} ${project.description} ${project.tech}`
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+
+      if (!matchesSearch) {
+        return false;
+      }
 
       if (activeFilter === "completed") {
         return project.status === "Completed";
@@ -260,6 +272,8 @@ export default function Projects() {
                 type="text"
                 placeholder="Search projects..."
                 className="bg-transparent outline-none flex-1 text-[15px]"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
 
             </div>
@@ -499,7 +513,7 @@ export default function Projects() {
               <div className="overflow-hidden rounded-2xl">
 
                 <img
-                  src={project.image}
+                  src={project.image || "/github.jpg"}
                   alt="project"
                   className="w-[190px] h-[110px] rounded-2xl object-cover transition-all duration-500 group-hover:scale-[1.03]"
                 />
@@ -515,6 +529,19 @@ export default function Projects() {
                 <p className="text-slate-500 leading-relaxed font-medium max-w-[480px]">
                   {project.description}
                 </p>
+
+                {project.reasons?.length > 0 && (
+                  <div className="mt-4 flex flex-wrap gap-2 max-w-[480px]">
+                    {project.reasons.slice(0, 3).map((reason) => (
+                      <span
+                        key={reason}
+                        className="px-3 py-1 rounded-full bg-[#f7f5f2] text-[12px] font-semibold text-slate-600 border border-[#ece6dc]"
+                      >
+                        {reason}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
               </div>
 
@@ -536,6 +563,10 @@ export default function Projects() {
                   {project.status}
                 </div>
 
+                <div className="px-4 py-1 rounded-full text-sm font-medium inline-flex bg-[#f5f1ea] text-slate-700">
+                  {project.score ?? 0}/100
+                </div>
+
                 <div className="px-4 py-1 rounded-full text-sm font-medium inline-flex bg-[#fff3df] text-orange-600">
                   {project.tech}
                 </div>
@@ -552,48 +583,14 @@ export default function Projects() {
 
       ) : (
 
-       <div className="grid gap-4">
-
-  {[1, 2].map((item) => (
-
-    <div
-      key={item}
-      className="bg-white border border-[#e8e6e1] rounded-[1.7rem] p-5 flex items-center justify-between"
-    >
-
-      {/* LEFT */}
-
-      <div className="flex items-center gap-5">
-
-        <div className="w-[190px] h-[110px] rounded-2xl bg-[#f3f3f3] animate-pulse"></div>
-
-        <div>
-
-          <div className="w-[260px] h-7 rounded-lg bg-[#f3f3f3] mb-4 animate-pulse"></div>
-
-          <div className="w-[380px] h-4 rounded-lg bg-[#f3f3f3] mb-2 animate-pulse"></div>
-
-          <div className="w-[320px] h-4 rounded-lg bg-[#f3f3f3] animate-pulse"></div>
-
+        <div className="bg-white border border-[#e8e6e1] rounded-[1.7rem] p-8 text-center">
+          <h3 className="text-2xl font-semibold text-[#1d1d1f] mb-3">
+            No projects synced yet
+          </h3>
+          <p className="text-slate-500 font-medium max-w-2xl mx-auto leading-relaxed">
+            Add a public GitHub profile or save projects in your profile to populate this section. Once data is available, Capabl will show your repositories, score them, and recommend the next projects to build.
+          </p>
         </div>
-
-      </div>
-
-      {/* RIGHT */}
-
-      <div className="space-y-3">
-
-        <div className="w-28 h-9 rounded-full bg-[#f3f3f3] animate-pulse"></div>
-
-        <div className="w-32 h-9 rounded-full bg-[#f3f3f3] animate-pulse"></div>
-
-      </div>
-
-    </div>
-
-  ))}
-
-</div>
 
       )}
 
@@ -672,37 +669,13 @@ export default function Projects() {
 
 ) : (
 
-  <div className="space-y-4">
-
-    {[1, 2].map((item) => (
-
-      <div
-        key={item}
-        className="bg-white border border-[#e8e6e1] rounded-[1.7rem] p-5"
-      >
-
-        <div className="flex gap-4">
-
-          <div className="w-20 h-20 rounded-[1.5rem] bg-[#f3f3f3] animate-pulse"></div>
-
-          <div className="flex-1">
-
-            <div className="w-[220px] h-6 rounded-lg bg-[#f3f3f3] mb-4 animate-pulse"></div>
-
-            <div className="w-full h-4 rounded-lg bg-[#f3f3f3] mb-2 animate-pulse"></div>
-
-            <div className="w-[180px] h-4 rounded-lg bg-[#f3f3f3] mb-4 animate-pulse"></div>
-
-            <div className="w-24 h-8 rounded-full bg-[#f3f3f3] animate-pulse"></div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    ))}
-
+  <div className="bg-white border border-[#e8e6e1] rounded-[1.7rem] p-6 text-center">
+    <h3 className="text-xl font-semibold text-[#1d1d1f] mb-2">
+      No recommendations yet
+    </h3>
+    <p className="text-slate-500 font-medium leading-relaxed">
+      Complete your profile or connect GitHub so Capabl can suggest the next projects to build.
+    </p>
   </div>
 
 )}
