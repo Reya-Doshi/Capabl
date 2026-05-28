@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon --watch src --ext js,ts,json --exec \"tsx src/server.js\"",
+    "dev": "nodemon --watch src --ext js,ts,json --exec \"tsx src/server.ts\"",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [],
@@ -27,8 +27,15 @@
     "prisma": "^6.19.3"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/express-session": "^1.19.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.1.0",
     "@types/node": "^25.9.1",
+    "@types/passport": "^1.0.17",
+    "@types/passport-google-oauth20": "^2.0.17",
     "nodemon": "^3.1.14",
     "tsx": "^4.22.3",
     "typescript": "^6.0.3"
