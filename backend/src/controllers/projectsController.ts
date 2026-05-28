@@ -1,15 +1,15 @@
 import prisma from "../config/db.js";
 import { fetchGithubProfile } from "../services/socialService.js";
 
-function uniqueStrings(values = []) {
+function uniqueStrings(values: any[] = []): string[] {
   return [...new Set(
     values
       .filter(Boolean)
-      .map(v => String(v).trim())
+      .map((v: any) => String(v).trim())
   )];
 }
 
-function extractGithubUsername(value) {
+function extractGithubUsername(value: any) {
   if (!value) return null;
 
   return String(value)
@@ -21,29 +21,29 @@ function extractGithubUsername(value) {
     .replace(/^@/, "") || null;
 }
 
-function normalizeKey(value) {
+function normalizeKey(value: any) {
   return String(value || "").toLowerCase().trim();
 }
 
-function clampScore(score) {
+function clampScore(score: any) {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-function parseTechList(value) {
+function parseTechList(value: any): string[] {
   if (!value) return [];
   if (Array.isArray(value)) {
-    return value.map(String).map((s) => s.trim()).filter(Boolean);
+    return value.map(String).map((s: string) => s.trim()).filter(Boolean);
   }
   return String(value)
     .split(/[,|·•]/g)
-    .map((s) => s.trim())
+    .map((s: string) => s.trim())
     .filter(Boolean);
 }
 
-function toTitleCase(value) {
+function toTitleCase(value: any) {
   return String(value || "")
     .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/\b\w/g, (c: string) => c.toUpperCase())
     .trim();
 }
 
@@ -54,7 +54,7 @@ function githubHeaders() {
   };
 }
 
-async function fetchJson(url, extraHeaders = {}) {
+async function fetchJson(url: any, extraHeaders: any = {}) {
   try {
     const response = await fetch(url, {
       headers: {
@@ -69,7 +69,7 @@ async function fetchJson(url, extraHeaders = {}) {
   }
 }
 
-async function fetchText(url, extraHeaders = {}) {
+async function fetchText(url: any, extraHeaders: any = {}) {
   try {
     const response = await fetch(url, {
       headers: {
@@ -84,25 +84,25 @@ async function fetchText(url, extraHeaders = {}) {
   }
 }
 
-function wordSet(value) {
+function wordSet(value: any) {
   return new Set(
     String(value || "")
       .toLowerCase()
       .split(/[^a-z0-9+.#/-]+/i)
-      .map((s) => s.trim())
+      .map((s: string) => s.trim())
       .filter(Boolean)
   );
 }
 
-function countMatches(text, keywords) {
+function countMatches(text: any, keywords: any[]) {
   const haystack = normalizeKey(text);
-  return keywords.reduce((count, keyword) => {
+  return keywords.reduce((count: number, keyword: any) => {
     if (!keyword) return count;
     return haystack.includes(keyword) ? count + 1 : count;
   }, 0);
 }
 
-function readmeQualityScore(readmeText) {
+function readmeQualityScore(readmeText: any) {
   if (!readmeText) return 0;
 
   const text = String(readmeText);
@@ -124,7 +124,7 @@ function readmeQualityScore(readmeText) {
   return clampScore(score);
 }
 
-function buildSignalText(project, repoContext, careerFit, aiAnalysis) {
+function buildSignalText(project: any, repoContext: any, careerFit: any, aiAnalysis: any) {
   const parts = [
     project.title,
     project.description,
@@ -141,7 +141,7 @@ function buildSignalText(project, repoContext, careerFit, aiAnalysis) {
   return parts.filter(Boolean).join(" ").toLowerCase();
 }
 
-function collectCareerKeywords(careerFit, aiAnalysis) {
+function collectCareerKeywords(careerFit: any, aiAnalysis: any) {
   return new Set(
     [
       careerFit,
@@ -159,7 +159,7 @@ function collectCareerKeywords(careerFit, aiAnalysis) {
   );
 }
 
-function scoreProject({ project, repoContext, careerFit, aiAnalysis }) {
+function scoreProject({ project, repoContext, careerFit, aiAnalysis }: any) {
   const signalText = buildSignalText(project, repoContext, careerFit, aiAnalysis);
   const repoLanguages = Array.isArray(repoContext?.languages) ? repoContext.languages : [];
   const techTokens = new Set(
@@ -272,8 +272,8 @@ function scoreProject({ project, repoContext, careerFit, aiAnalysis }) {
   const hasCompletionHints = countMatches(signalText, completenessWords) > 0;
   const hasInnovationHints = countMatches(signalText, innovationWords) > 0;
   const hasComplexityHints = countMatches(signalText, complexityWords) > 0;
-  const techMatches = countMatches(signalText, techWords) + [...careerKeywords].filter((k) => techTokens.has(k)).length;
-  const relevanceMatches = [...careerKeywords].filter((keyword) => signalText.includes(keyword)).length;
+  const techMatches = countMatches(signalText, techWords) + [...careerKeywords].filter((k: any) => techTokens.has(k)).length;
+  const relevanceMatches = [...careerKeywords].filter((keyword: any) => signalText.includes(keyword)).length;
   const languageHits = languageCount >= 1 ? 1 : 0;
 
   const complexity = clampScore(
@@ -331,7 +331,7 @@ function scoreProject({ project, repoContext, careerFit, aiAnalysis }) {
 
   const relevance = clampScore(
     Math.min(40, relevanceMatches * 12) +
-      Math.min(20, [...careerKeywords].filter((keyword) => techTokens.has(keyword)).length * 8) +
+      Math.min(20, [...careerKeywords].filter((keyword: any) => techTokens.has(keyword)).length * 8) +
       (careerFit && signalText.includes(normalizeKey(careerFit)) ? 20 : 0) +
       (hasGitHubRepo ? 10 : 0)
   );
@@ -395,8 +395,8 @@ function buildReasons({
   languageCount,
   stars,
   daysSinceUpdate,
-}) {
-  const reasons = [];
+}: any) {
+  const reasons: any[] = [];
 
   const aiFeatureHit = /\b(ai|ml|machine learning|llm|rag|chatbot|assistant|automation|voice|personalized)\b/i.test(
     signalText
@@ -422,12 +422,12 @@ function buildReasons({
   return Array.from(new Set(reasons)).slice(0, 3);
 }
 
-function buildStoredProjects(aiAnalysis, careerFit) {
+function buildStoredProjects(aiAnalysis: any, careerFit: any) {
   if (!aiAnalysis) return [];
 
   const titles = aiAnalysis.projectTitles || [];
   if (titles.length > 0) {
-    return titles.map((title, index) => {
+    return titles.map((title: any, index: number) => {
       const tech = parseTechList(aiAnalysis.projectTechnologies?.[index]);
       const description = aiAnalysis.projectDescriptions?.[index] || "";
       const status = aiAnalysis.projectStatuses?.[index] || "Completed";
@@ -454,7 +454,7 @@ function buildStoredProjects(aiAnalysis, careerFit) {
   }
 
   return (aiAnalysis.savedProjects || [])
-    .map((raw) => {
+    .map((raw: any) => {
       try {
         const project = JSON.parse(raw);
         const title = project.title || project.name || "Untitled project";
@@ -487,11 +487,11 @@ function buildStoredProjects(aiAnalysis, careerFit) {
     .filter(Boolean);
 }
 
-async function buildGithubProjects(githubProfile, aiAnalysis, careerFit) {
+async function buildGithubProjects(githubProfile: any, aiAnalysis: any, careerFit: any) {
   if (!githubProfile?.ok || !githubProfile?.username) return [];
 
   const repos = githubProfile.topRepos || [];
-  const usableRepos = repos.filter((repo) => {
+  const usableRepos = repos.filter((repo: any) => {
     console.log("REPO BEFORE FILTER:", repo?.name);
     return Boolean(
       repo?.name ||
@@ -502,10 +502,10 @@ async function buildGithubProjects(githubProfile, aiAnalysis, careerFit) {
     );
   });
 
-  console.log("REPO AFTER FILTER:", usableRepos.map((repo) => repo?.name));
+  console.log("REPO AFTER FILTER:", usableRepos.map((repo: any) => repo?.name));
 
   const projectResults = await Promise.all(
-    usableRepos.map(async (repoContext) => {
+    usableRepos.map(async (repoContext: any) => {
       const technologies = uniqueStrings([
         ...(repoContext.languages || []),
         repoContext.language,
@@ -556,7 +556,7 @@ async function buildGithubProjects(githubProfile, aiAnalysis, careerFit) {
   return filteredProjects;
 }
 
-function buildRecommendedProjects(aiAnalysis, careerFit, existingProjects) {
+function buildRecommendedProjects(aiAnalysis: any, careerFit: any, existingProjects: any) {
   const titles = aiAnalysis?.recommendedProjectTitles?.length
     ? aiAnalysis.recommendedProjectTitles
     : aiAnalysis?.recommendedProjects || [];
@@ -564,14 +564,14 @@ function buildRecommendedProjects(aiAnalysis, careerFit, existingProjects) {
   const tags = aiAnalysis?.recommendedProjectTags || [];
 
   const explicit = titles
-    .map((title, index) => ({
+    .map((title: any, index: number) => ({
       title,
       desc:
         descs[index] ||
         `Build ${title} to strengthen your ${careerFit || "target role"} profile.`,
       tag: tags[index] || careerFit || "Portfolio",
     }))
-    .filter((item) => normalizeKey(item.title));
+    .filter((item: any) => normalizeKey(item.title));
 
   if (explicit.length > 0) {
     return explicit;
@@ -581,36 +581,36 @@ function buildRecommendedProjects(aiAnalysis, careerFit, existingProjects) {
   const templates =
     ROLE_TEMPLATES[role] || ROLE_TEMPLATES.frontend || ROLE_TEMPLATES["full stack"];
 
-  const existing = new Set(existingProjects.map((project) => normalizeKey(project.title)));
+  const existing = new Set(existingProjects.map((project: any) => normalizeKey(project.title)));
 
   return templates
-    .filter((template) => !existing.has(normalizeKey(template.title)))
+    .filter((template: any) => !existing.has(normalizeKey(template.title)))
     .slice(0, 4)
-    .map((template) => ({
+    .map((template: any) => ({
       title: template.title,
       desc: template.desc(careerFit),
       tag: template.tag,
     }));
 }
 
-const ROLE_TEMPLATES = {
+const ROLE_TEMPLATES: Record<string, any[]> = {
   "full stack": [
     {
       title: "Job Tracker Dashboard",
       tag: "React + Node",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Build a dashboard for tracking applications, interviews, and outcomes for ${careerFit || "your target role"}.`,
     },
     {
       title: "Auth-Backed Portfolio CMS",
       tag: "Next.js",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Create a content-managed portfolio with login, project publishing, and SEO for ${careerFit || "recruiter visibility"}.`,
     },
     {
       title: "Interview Prep Workspace",
       tag: "Roadmap",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Ship a study planner that links skills, notes, and mock interviews for ${careerFit || "your career path"}.`,
     },
   ],
@@ -618,19 +618,19 @@ const ROLE_TEMPLATES = {
     {
       title: "Design System Showcase",
       tag: "UI",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Build a polished component library and case-study page aimed at ${careerFit || "frontend hiring"}.`,
     },
     {
       title: "Analytics Dashboard Clone",
       tag: "React",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Recreate a dashboard with filters, charts, and responsive layouts for ${careerFit || "frontend depth"}.`,
     },
     {
       title: "Product Landing Experience",
       tag: "Responsive UI",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Launch a fast, accessible marketing site with motion and conversion-focused copy for ${careerFit || "your portfolio"}.`,
     },
   ],
@@ -638,19 +638,19 @@ const ROLE_TEMPLATES = {
     {
       title: "REST API with Auth",
       tag: "Node + Express",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Build a secure API with validation, authentication, and pagination for ${careerFit || "backend practice"}.`,
     },
     {
       title: "Caching and Queue Service",
       tag: "Redis",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Create a service that uses caching and async jobs to strengthen ${careerFit || "backend systems design"}.`,
     },
     {
       title: "Admin Analytics API",
       tag: "Postgres",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Model reporting endpoints and role-based access for ${careerFit || "production backend work"}.`,
     },
   ],
@@ -658,19 +658,19 @@ const ROLE_TEMPLATES = {
     {
       title: "Resume Screener",
       tag: "Python + NLP",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Create a resume ranking tool that maps closely to ${careerFit || "applied AI"}.`,
     },
     {
       title: "Interview Coach Bot",
       tag: "RAG",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Build a question-answering assistant with retrieval and evaluation for ${careerFit || "LLM practice"}.`,
     },
     {
       title: "Skill Gap Predictor",
       tag: "ML",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Predict learning gaps from resumes and project history for ${careerFit || "AI portfolio depth"}.`,
     },
   ],
@@ -678,27 +678,27 @@ const ROLE_TEMPLATES = {
     {
       title: "Insights Dashboard",
       tag: "Python + SQL",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Analyze data, expose insights, and present findings for ${careerFit || "data science hiring"}.`,
     },
     {
       title: "Cohort Retention Study",
       tag: "Analytics",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Build an experiment analysis project showing retention and churn for ${careerFit || "data work"}.`,
     },
     {
       title: "Model Comparison Lab",
       tag: "ML",
-      desc: (careerFit) =>
+      desc: (careerFit: any) =>
         `Compare multiple models and report metrics for ${careerFit || "portfolio differentiation"}.`,
     },
   ],
 };
 
-export const listProjects = async (req, res) => {
+export const listProjects = async (req: any, res: any) => {
   try {
-    const user = await prisma.user.findUnique({
+    const user: any = await prisma.user.findUnique({
       where: { id: req.user.id },
       include: { skills: true, aiAnalysis: true },
     });
@@ -730,8 +730,8 @@ export const listProjects = async (req, res) => {
     const mergedProjects = dedupeProjects([...storedProjects, ...githubProjects]).slice(0, 12);
     const recommendedProjects = buildRecommendedProjects(aiAnalysis, careerFit, mergedProjects).slice(0, 6);
 
-    const completedProjects = mergedProjects.filter((project) => project.status === "Completed").length;
-    const inProgressProjects = mergedProjects.filter((project) => project.status === "In Progress").length;
+    const completedProjects = mergedProjects.filter((project: any) => project.status === "Completed").length;
+    const inProgressProjects = mergedProjects.filter((project: any) => project.status === "In Progress").length;
     const totalProjects = aiAnalysis?.totalProjects ?? mergedProjects.length;
     const completedProjectsTotal =
       aiAnalysis?.completedProjects ?? completedProjects;
@@ -752,13 +752,13 @@ export const listProjects = async (req, res) => {
       },
       github: githubProfile?.ok ? githubProfile : null,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("listProjects error:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-function dedupeProjects(projects) {
+function dedupeProjects(projects: any[]) {
   const map = new Map();
 
   for (const project of projects) {
@@ -771,5 +771,5 @@ function dedupeProjects(projects) {
     }
   }
 
-  return Array.from(map.values()).sort((a, b) => (b.score || 0) - (a.score || 0));
+  return Array.from(map.values()).sort((a: any, b: any) => (b.score || 0) - (a.score || 0));
 }

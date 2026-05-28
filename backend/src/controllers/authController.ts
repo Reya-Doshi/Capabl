@@ -4,17 +4,17 @@ import bcrypt from "bcrypt";
 
 import jwt from "jsonwebtoken";
 
-const generateToken = (id) => {
+const generateToken = (id: any) => {
   return jwt.sign(
     { id },
-    process.env.JWT_SECRET,
+    process.env.JWT_SECRET as string,
     {
       expiresIn: "30d",
     }
   );
 };
 
-export const registerUser = async (req, res) => {
+export const registerUser = async (req: any, res: any) => {
   try {
 
     const { name, email, password } = req.body;
@@ -60,7 +60,7 @@ export const registerUser = async (req, res) => {
 
 });
 
-  } catch (error) {
+  } catch (error: any) {
 
     res.status(500).json({
       message: error.message,
@@ -69,7 +69,7 @@ export const registerUser = async (req, res) => {
   }
 };
 
-export const loginUser = async (req, res) => {
+export const loginUser = async (req: any, res: any) => {
   try {
 
     const { email, password } = req.body;
@@ -112,7 +112,7 @@ export const loginUser = async (req, res) => {
 
     }
 
-  } catch (error) {
+  } catch (error: any) {
 
     res.status(500).json({
       message: error.message,

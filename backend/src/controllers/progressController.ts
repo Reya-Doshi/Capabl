@@ -1,10 +1,10 @@
 import prisma from "../config/db.js";
 
-function normaliseSkill(raw) {
+function normaliseSkill(raw: any) {
   return String(raw || "").trim().toLowerCase();
 }
 
-export const toggleSkillProgress = async (req, res) => {
+export const toggleSkillProgress = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
     const skillName = normaliseSkill(req.body?.skillName);
@@ -35,15 +35,15 @@ export const toggleSkillProgress = async (req, res) => {
 
     res.status(200).json({
       message: "Skill progress updated",
-      manualSkills: list.map((s) => s.skillName),
+      manualSkills: list.map((s: any) => s.skillName),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("toggleSkillProgress error:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-export const toggleWeeklyTask = async (req, res) => {
+export const toggleWeeklyTask = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
     const week = Number(req.body?.week);
@@ -79,7 +79,7 @@ export const toggleWeeklyTask = async (req, res) => {
       message: "Weekly task updated",
       weeklyProgress: list,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("toggleWeeklyTask error:", error);
     res.status(500).json({ message: error.message });
   }

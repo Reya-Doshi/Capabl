@@ -24,7 +24,7 @@ app.use(
   express.static(path.join(process.cwd(), "uploads"))
 );
 
-app.get("/", (req, res) => {
+app.get("/", (req: any, res: any) => {
   res.send("Capabl API Running");
 });
 

@@ -5,7 +5,7 @@ import bcrypt from "bcrypt";
 
 /* GET USER PROFILE */
 
-export const getUserProfile = async (req, res) => {
+export const getUserProfile = async (req: any, res: any) => {
 
   try {
 
@@ -31,7 +31,7 @@ export const getUserProfile = async (req, res) => {
 
     res.status(200).json(user);
 
-  } catch (error) {
+  } catch (error: any) {
 
     res.status(500).json({
       message: error.message,
@@ -45,7 +45,7 @@ export const getUserProfile = async (req, res) => {
 
 /* UPDATE PROFILE */
 
-export const updateUserProfile = async (req, res) => {
+export const updateUserProfile = async (req: any, res: any) => {
 
   try {
 
@@ -77,7 +77,7 @@ export const updateUserProfile = async (req, res) => {
 
     res.status(200).json(updatedUser);
 
-  } catch (error) {
+  } catch (error: any) {
 
     res.status(500).json({
       message: error.message,
@@ -91,7 +91,7 @@ export const updateUserProfile = async (req, res) => {
 
 /* CHANGE PASSWORD */
 
-export const changePassword = async (req, res) => {
+export const changePassword = async (req: any, res: any) => {
 
   try {
 
@@ -150,7 +150,7 @@ export const changePassword = async (req, res) => {
       message: "Password updated successfully",
     });
 
-  } catch (error) {
+  } catch (error: any) {
 
     res.status(500).json({
       message: error.message,
@@ -164,7 +164,7 @@ export const changePassword = async (req, res) => {
 
 /* DELETE ACCOUNT */
 
-export const deleteAccount = async (req, res) => {
+export const deleteAccount = async (req: any, res: any) => {
 
   try {
 
@@ -196,7 +196,7 @@ export const deleteAccount = async (req, res) => {
       message: "Account deleted successfully",
     });
 
-  } catch (error) {
+  } catch (error: any) {
 
     res.status(500).json({
       message: error.message,

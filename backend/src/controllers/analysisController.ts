@@ -1,7 +1,7 @@
 import prisma from "../config/db.js";
 import { runAnalysis } from "../services/analysisService.js";
 
-function buildUserPayload(user) {
+function buildUserPayload(user: any) {
   return {
     id: user.id,
     name: user.name,
@@ -14,11 +14,11 @@ function buildUserPayload(user) {
     resume: user.resume,
     resumeName: user.resumeName,
     careerGoal: user.careerGoal,
-    skills: user.skills.map((s) => s.name),
+    skills: user.skills.map((s: any) => s.name),
   };
 }
 
-async function persistAnalysis(userId, result, hasResume) {
+async function persistAnalysis(userId: any, result: any, hasResume: any) {
   const aiData = {
     careerFit: result.careerFit,
     readinessScore: result.readinessScore,
@@ -32,7 +32,7 @@ async function persistAnalysis(userId, result, hasResume) {
     weaknesses: result.skillGaps,
     recommendedRoles: [result.careerFit],
     aiSuggestions: result.aiSuggestions.map(
-      (s) => `${s.title}: ${s.description}`
+      (s: any) => `${s.title}: ${s.description}`
     ),
     aiSummary: `Readiness ${result.readinessScore}% for ${result.careerFit}. Resume ${result.resume.score}%, ATS ${result.resume.atsScore}%, GitHub ${result.github.score}%, LinkedIn ${result.linkedin.score}%.`,
   };
@@ -44,7 +44,7 @@ async function persistAnalysis(userId, result, hasResume) {
   });
 }
 
-async function loadManualProgress(userId) {
+async function loadManualProgress(userId: any) {
   try {
     const [skills, weekly] = await Promise.all([
       prisma.skillProgress.findMany({
@@ -57,7 +57,7 @@ async function loadManualProgress(userId) {
       }),
     ]);
     return {
-      manualSkills: skills.map((s) => s.skillName),
+      manualSkills: skills.map((s: any) => s.skillName),
       weeklyProgress: weekly,
     };
   } catch {
@@ -66,7 +66,7 @@ async function loadManualProgress(userId) {
   }
 }
 
-export const getAnalysis = async (req, res) => {
+export const getAnalysis = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
 
@@ -82,11 +82,11 @@ export const getAnalysis = async (req, res) => {
 
     const analysis = await runAnalysis({
       user,
-      skills: user.skills.map((s) => s.name),
-      careerGoal: user.careerGoal,
-      resumePath: user.resume,
-      githubUrl: user.github,
-      linkedinUrl: user.linkedin,
+      skills: (user as any).skills.map((s: any) => s.name),
+      careerGoal: (user as any).careerGoal,
+      resumePath: (user as any).resume,
+      githubUrl: (user as any).github,
+      linkedinUrl: (user as any).linkedin,
       manualSkills,
       weeklyProgress,
     });
@@ -94,15 +94,15 @@ export const getAnalysis = async (req, res) => {
     res.status(200).json({
       user: buildUserPayload(user),
       analysis,
-      stored: user.aiAnalysis || null,
+      stored: (user as any).aiAnalysis || null,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("getAnalysis error:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-export const refreshAnalysis = async (req, res) => {
+export const refreshAnalysis = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
 
@@ -118,18 +118,18 @@ export const refreshAnalysis = async (req, res) => {
 
     const result = await runAnalysis({
       user,
-      skills: user.skills.map((s) => s.name),
-      careerGoal: user.careerGoal,
-      resumePath: user.resume,
-      githubUrl: user.github,
-      linkedinUrl: user.linkedin,
+      skills: (user as any).skills.map((s: any) => s.name),
+      careerGoal: (user as any).careerGoal,
+      resumePath: (user as any).resume,
+      githubUrl: (user as any).github,
+      linkedinUrl: (user as any).linkedin,
       manualSkills,
       weeklyProgress,
     });
 
-    await persistAnalysis(userId, result, Boolean(user.resume));
+    await persistAnalysis(userId, result, Boolean((user as any).resume));
 
-    const refreshed = await prisma.user.findUnique({
+    const refreshed: any = await prisma.user.findUnique({
       where: { id: userId },
       include: { skills: true, aiAnalysis: true },
     });
@@ -139,7 +139,7 @@ export const refreshAnalysis = async (req, res) => {
       analysis: result,
       stored: refreshed.aiAnalysis,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("refreshAnalysis error:", error);
     res.status(500).json({ message: error.message });
   }

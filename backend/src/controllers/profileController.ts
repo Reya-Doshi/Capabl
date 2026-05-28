@@ -1,7 +1,7 @@
 import prisma from "../config/db.js";
 import { runAnalysis } from "../services/analysisService.js";
 
-async function loadManualProgress(userId) {
+async function loadManualProgress(userId: any) {
   try {
     const [skills, weekly] = await Promise.all([
       prisma.skillProgress.findMany({
@@ -14,7 +14,7 @@ async function loadManualProgress(userId) {
       }),
     ]);
     return {
-      manualSkills: skills.map((s) => s.skillName),
+      manualSkills: skills.map((s: any) => s.skillName),
       weeklyProgress: weekly,
     };
   } catch {
@@ -22,20 +22,20 @@ async function loadManualProgress(userId) {
   }
 }
 
-const parseSkills = (raw) => {
+const parseSkills = (raw: any): string[] => {
   if (!raw) return [];
   if (Array.isArray(raw))
-    return raw.map((s) => String(s).trim()).filter(Boolean);
+    return raw.map((s: any) => String(s).trim()).filter(Boolean);
   try {
     const j = JSON.parse(raw);
     if (Array.isArray(j))
-      return j.map((s) => String(s).trim()).filter(Boolean);
+      return j.map((s: any) => String(s).trim()).filter(Boolean);
   } catch {
     /* not JSON */
   }
   return String(raw)
     .split(",")
-    .map((s) => s.trim())
+    .map((s: string) => s.trim())
     .filter(Boolean);
 };
 
@@ -82,33 +82,33 @@ const TECH_KEYWORDS = [
   "analytics",
 ];
 
-function normalizeKey(value) {
+function normalizeKey(value: any) {
   return String(value || "").toLowerCase().trim();
 }
 
-function uniqueStrings(values) {
+function uniqueStrings(values: any): string[] {
   return Array.from(
     new Set(
       (values || [])
-        .map((value) => String(value || "").trim())
+        .map((value: any) => String(value || "").trim())
         .filter(Boolean)
     )
-  );
+  ) as string[];
 }
 
-function toTitleCase(value) {
+function toTitleCase(value: any) {
   return String(value || "")
     .replace(/[-_]+/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/\b\w/g, (c: string) => c.toUpperCase())
     .trim();
 }
 
-function extractTechKeywords(text) {
+function extractTechKeywords(text: any) {
   const haystack = normalizeKey(text);
   return TECH_KEYWORDS.filter((keyword) => haystack.includes(keyword));
 }
 
-function parseSavedProject(raw) {
+function parseSavedProject(raw: any) {
   try {
     const project = JSON.parse(raw);
     return {
@@ -127,7 +127,7 @@ function parseSavedProject(raw) {
   }
 }
 
-function buildProjectRecordFromRepo(repo, careerFit) {
+function buildProjectRecordFromRepo(repo: any, careerFit: any) {
   const repoLanguages = uniqueStrings([
     ...(repo.languages || []),
     repo.language,
@@ -168,26 +168,26 @@ function buildProjectRecordFromRepo(repo, careerFit) {
   };
 }
 
-function buildRecommendations(analysisResult, projects, githubProjects) {
+function buildRecommendations(analysisResult: any, projects: any, githubProjects: any) {
   const careerFit = analysisResult.careerFit || "Software Engineer";
   const readiness = analysisResult.readinessScore || 0;
   const missingSkills = uniqueStrings(analysisResult.skillGaps || analysisResult.recommendedSkills || []);
   const githubTech = uniqueStrings(
-    githubProjects.flatMap((project) => project.technologies || [])
+    githubProjects.flatMap((project: any) => project.technologies || [])
   );
   const allTech = uniqueStrings([
     ...githubTech,
-    ...(analysisResult.github?.profile?.topLanguages || []).map((l) => l.name),
+    ...(analysisResult.github?.profile?.topLanguages || []).map((l: any) => l.name),
   ]);
 
-  const suggestions = [];
-  const addSuggestion = (title, desc, tag) => {
+  const suggestions: any[] = [];
+  const addSuggestion = (title: any, desc: any, tag: any) => {
     if (!title || suggestions.some((item) => normalizeKey(item.title) === normalizeKey(title))) return;
     suggestions.push({ title, desc, tag });
   };
 
   const roleKey = normalizeKey(careerFit);
-  if (roleKey.includes("ai") || roleKey.includes("ml") || allTech.some((t) => /python|nlp|llm|gemini|openai|tensorflow|pytorch/.test(t))) {
+  if (roleKey.includes("ai") || roleKey.includes("ml") || allTech.some((t: any) => /python|nlp|llm|gemini|openai|tensorflow|pytorch/.test(t))) {
     addSuggestion(
       "Build an AI Resume Analyzer",
       `Improve NLP + backend skills by building a resume parser, keyword matcher, and scoring pipeline.`,
@@ -199,21 +199,21 @@ function buildRecommendations(analysisResult, projects, githubProjects) {
       "LLM"
     );
   }
-  if (roleKey.includes("frontend") || allTech.some((t) => /react|next.js|tailwind|redux/.test(t))) {
+  if (roleKey.includes("frontend") || allTech.some((t: any) => /react|next.js|tailwind|redux/.test(t))) {
     addSuggestion(
       "Build a Design System Showcase",
       `Strengthen frontend depth with reusable UI components, accessibility, and motion.`,
       "Frontend"
     );
   }
-  if (roleKey.includes("backend") || allTech.some((t) => /node|express|postgres|mongodb|redis/.test(t))) {
+  if (roleKey.includes("backend") || allTech.some((t: any) => /node|express|postgres|mongodb|redis/.test(t))) {
     addSuggestion(
       "Build a Secure API Platform",
       `Improve backend credibility with auth, validation, pagination, and clean API design.`,
       "Backend"
     );
   }
-  if (roleKey.includes("data") || allTech.some((t) => /python|sql|analytics|pandas|numpy/.test(t))) {
+  if (roleKey.includes("data") || allTech.some((t: any) => /python|sql|analytics|pandas|numpy/.test(t))) {
     addSuggestion(
       "Build a Data Insights Dashboard",
       `Turn datasets into visual insights and demonstrate analysis + reporting depth.`,
@@ -237,13 +237,13 @@ function buildRecommendations(analysisResult, projects, githubProjects) {
     );
   }
 
-  const existingTitles = new Set(projects.map((project) => normalizeKey(project.title)));
-  const filtered = suggestions.filter((item) => !existingTitles.has(normalizeKey(item.title)));
+  const existingTitles = new Set(projects.map((project: any) => normalizeKey(project.title)));
+  const filtered = suggestions.filter((item: any) => !existingTitles.has(normalizeKey(item.title)));
 
   return filtered.slice(0, 6);
 }
 
-async function persistAnalysis(userId, analysisResult, hasResume) {
+async function persistAnalysis(userId: any, analysisResult: any, hasResume: any) {
   const latestInterview = await prisma.interviewSession.findFirst({
     where: {
       userId,
@@ -264,17 +264,17 @@ async function persistAnalysis(userId, analysisResult, hasResume) {
     },
   });
 
-  const existingAnalysis = await prisma.aIAnalysis.findUnique({
+  const existingAnalysis: any = await prisma.aIAnalysis.findUnique({
     where: { userId },
   });
 
   const githubProjects = (analysisResult.github?.profile?.topRepos || [])
-    .map((repo) =>
+    .map((repo: any) =>
       buildProjectRecordFromRepo(repo, analysisResult.careerFit || "Software Engineer")
     )
     .filter(Boolean);
 
-  const existingProjects = [];
+  const existingProjects: any[] = [];
   if (existingAnalysis) {
     const titles = existingAnalysis.projectTitles || [];
     const descriptions = existingAnalysis.projectDescriptions || [];
@@ -282,7 +282,7 @@ async function persistAnalysis(userId, analysisResult, hasResume) {
     const statuses = existingAnalysis.projectStatuses || [];
     const images = existingAnalysis.projectImages || [];
 
-    titles.forEach((title, index) => {
+    titles.forEach((title: any, index: number) => {
       const project = {
         title,
         description: descriptions[index] || "",
@@ -297,18 +297,18 @@ async function persistAnalysis(userId, analysisResult, hasResume) {
     (existingAnalysis.savedProjects || [])
       .map(parseSavedProject)
       .filter(Boolean)
-      .forEach((project) => existingProjects.push(project));
+      .forEach((project: any) => existingProjects.push(project));
   }
 
   const mergedProjects = uniqueStrings([
-    ...existingProjects.map((project) => project.title),
-    ...githubProjects.map((project) => project.title),
-  ]).map((title) => {
+    ...existingProjects.map((project: any) => project.title),
+    ...githubProjects.map((project: any) => project.title),
+  ]).map((title: any) => {
     const existing = existingProjects.find(
-      (project) => normalizeKey(project.title) === normalizeKey(title)
+      (project: any) => normalizeKey(project.title) === normalizeKey(title)
     );
     const githubProject = githubProjects.find(
-      (project) => normalizeKey(project.title) === normalizeKey(title)
+      (project: any) => normalizeKey(project.title) === normalizeKey(title)
     );
     const source = githubProject || existing;
     const technologies = uniqueStrings([
@@ -355,7 +355,7 @@ async function persistAnalysis(userId, analysisResult, hasResume) {
         ...(latestInterview?.weaknesses || []),
       ]),
       aiSuggestions: uniqueStrings([
-        ...(analysisResult.aiSuggestions || []).map((s) =>
+        ...(analysisResult.aiSuggestions || []).map((s: any) =>
           typeof s === "string" ? s : `${s.title}: ${s.description}`
         ),
         ...(latestInterview?.summary ? [latestInterview.summary] : []),
@@ -373,7 +373,7 @@ async function persistAnalysis(userId, analysisResult, hasResume) {
     githubScore: analysisResult.github.score,
     linkedinScore: analysisResult.linkedin.score,
     languages: uniqueStrings(
-      (analysisResult.github?.profile?.topLanguages || []).map((language) =>
+      (analysisResult.github?.profile?.topLanguages || []).map((language: any) =>
         language.name
       )
     ),
@@ -384,7 +384,7 @@ async function persistAnalysis(userId, analysisResult, hasResume) {
     recommendedRoles: [analysisResult.careerFit],
     recommendedCourses: uniqueStrings(
       analysisResult.recommendedSkills?.map(
-        (skill) => `Course on ${skill}`
+        (skill: any) => `Course on ${skill}`
       ) || []
     ),
     recommendedInternships: uniqueStrings([
@@ -393,22 +393,22 @@ async function persistAnalysis(userId, analysisResult, hasResume) {
     internshipExperience: [],
     certifications: [],
     aiSuggestions: analysisResult.aiSuggestions.map(
-      (s) => `${s.title}: ${s.description}`
+      (s: any) => `${s.title}: ${s.description}`
     ),
     whyRecommendations: uniqueStrings([
       `Readiness is ${analysisResult.readinessScore}% for ${analysisResult.careerFit}`,
       ...(analysisResult.skillGaps || []).slice(0, 3).map(
-        (skill) => `Close the ${skill} gap with project work`
+        (skill: any) => `Close the ${skill} gap with project work`
       ),
     ]),
-    projectTitles: mergedProjects.map((project) => project.title),
-    projectDescriptions: mergedProjects.map((project) => project.description),
-    projectTechnologies: mergedProjects.map((project) =>
+    projectTitles: mergedProjects.map((project: any) => project.title),
+    projectDescriptions: mergedProjects.map((project: any) => project.description),
+    projectTechnologies: mergedProjects.map((project: any) =>
       uniqueStrings(project.technologies || []).join(", ")
     ),
-    projectImages: mergedProjects.map((project) => project.image || "/github.jpg"),
-    projectStatuses: mergedProjects.map((project) => project.status || "In Progress"),
-    savedProjects: mergedProjects.map((project) =>
+    projectImages: mergedProjects.map((project: any) => project.image || "/github.jpg"),
+    projectStatuses: mergedProjects.map((project: any) => project.status || "In Progress"),
+    savedProjects: mergedProjects.map((project: any) =>
       JSON.stringify({
         title: project.title,
         description: project.description,
@@ -427,16 +427,16 @@ async function persistAnalysis(userId, analysisResult, hasResume) {
         source: project.source,
       })
     ),
-    recommendedProjects: recommendedProjects.map((project) => project.title),
-    recommendedProjectTitles: recommendedProjects.map((project) => project.title),
-    recommendedProjectDesc: recommendedProjects.map((project) => project.desc),
-    recommendedProjectTags: recommendedProjects.map((project) => project.tag),
+    recommendedProjects: recommendedProjects.map((project: any) => project.title),
+    recommendedProjectTitles: recommendedProjects.map((project: any) => project.title),
+    recommendedProjectDesc: recommendedProjects.map((project: any) => project.desc),
+    recommendedProjectTags: recommendedProjects.map((project: any) => project.tag),
     totalProjects: mergedProjects.length,
     completedProjects: mergedProjects.filter(
-      (project) => project.status === "Completed"
+      (project: any) => project.status === "Completed"
     ).length,
     inProgressProjects: mergedProjects.filter(
-      (project) => project.status === "In Progress"
+      (project: any) => project.status === "In Progress"
     ).length,
     aiSummary: `Readiness ${analysisResult.readinessScore}% for ${analysisResult.careerFit}. Resume ${analysisResult.resume.score}%, ATS ${analysisResult.resume.atsScore}%, GitHub ${analysisResult.github.score}%, LinkedIn ${analysisResult.linkedin.score}%.`,
   };
@@ -448,7 +448,7 @@ async function persistAnalysis(userId, analysisResult, hasResume) {
   });
 }
 
-export const upsertProfile = async (req, res) => {
+export const upsertProfile = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
 
@@ -464,7 +464,7 @@ export const upsertProfile = async (req, res) => {
 
     const skills = parseSkills(req.body.skills);
 
-    const data = {
+    const data: any = {
       college: college || null,
       age: age ? Number(age) : null,
       bio: bio || null,
@@ -488,11 +488,11 @@ export const upsertProfile = async (req, res) => {
     await prisma.skill.deleteMany({ where: { userId } });
     if (skills.length > 0) {
       await prisma.skill.createMany({
-        data: skills.map((s) => ({ name: s, userId })),
+        data: skills.map((s: any) => ({ name: s, userId })),
       });
     }
 
-    const fullUser = await prisma.user.findUnique({
+    const fullUser: any = await prisma.user.findUnique({
       where: { id: userId },
       include: { skills: true },
     });
@@ -501,7 +501,7 @@ export const upsertProfile = async (req, res) => {
 
     const analysisResult = await runAnalysis({
       user: fullUser,
-      skills: fullUser.skills.map((s) => s.name),
+      skills: fullUser.skills.map((s: any) => s.name),
       careerGoal: fullUser.careerGoal,
       resumePath: fullUser.resume,
       githubUrl: fullUser.github,
@@ -522,13 +522,13 @@ export const upsertProfile = async (req, res) => {
       user: userResponse,
       analysis: analysisResult,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("upsertProfile error:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-export const getProfile = async (req, res) => {
+export const getProfile = async (req: any, res: any) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: req.user.id },
@@ -539,12 +539,12 @@ export const getProfile = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
 
     res.status(200).json({ user });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
 };
 
-export const uploadResume = async (req, res) => {
+export const uploadResume = async (req: any, res: any) => {
   try {
     if (!req.file)
       return res.status(400).json({ message: "No resume file provided" });
@@ -560,7 +560,7 @@ export const uploadResume = async (req, res) => {
       },
     });
 
-    const fullUser = await prisma.user.findUnique({
+    const fullUser: any = await prisma.user.findUnique({
       where: { id: userId },
       include: { skills: true },
     });
@@ -569,7 +569,7 @@ export const uploadResume = async (req, res) => {
 
     const analysisResult = await runAnalysis({
       user: fullUser,
-      skills: fullUser.skills.map((s) => s.name),
+      skills: fullUser.skills.map((s: any) => s.name),
       careerGoal: fullUser.careerGoal,
       resumePath: fullUser.resume,
       githubUrl: fullUser.github,
@@ -586,7 +586,7 @@ export const uploadResume = async (req, res) => {
       resumeName: req.file.originalname,
       analysis: analysisResult,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("uploadResume error:", error);
     res.status(500).json({ message: error.message });
   }

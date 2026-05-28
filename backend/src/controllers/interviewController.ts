@@ -27,7 +27,7 @@ import {
 // GET /api/interviews
 //   → catalog of types + past sessions + aggregate performance + voice status
 // ---------------------------------------------------------------------------
-export const listInterviews = async (req, res) => {
+export const listInterviews = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
 
@@ -37,18 +37,18 @@ export const listInterviews = async (req, res) => {
       take: 50,
     });
 
-    const finished = sessions.filter((s) => s.status === "finished");
-    const scores = finished.map((s) => s.score || 0);
+    const finished = sessions.filter((s: any) => s.status === "finished");
+    const scores = finished.map((s: any) => s.score || 0);
     const avg = scores.length
-      ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
+      ? Math.round(scores.reduce((a: number, b: number) => a + b, 0) / scores.length)
       : 0;
     const best = scores.length ? Math.max(...scores) : 0;
 
     // -------- Dimension heatmap (averaged across finished sessions) --------
-    const dimAvg = (key) => {
-      const vals = finished.map((s) => s[key]).filter((v) => v != null);
+    const dimAvg = (key: any) => {
+      const vals = finished.map((s: any) => s[key]).filter((v: any) => v != null);
       return vals.length
-        ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length)
+        ? Math.round(vals.reduce((a: number, b: number) => a + b, 0) / vals.length)
         : 0;
     };
     const dimensions = {
@@ -61,10 +61,10 @@ export const listInterviews = async (req, res) => {
     };
 
     // -------- Strength / weakness frequency heatmaps -----------------------
-    const tally = (key) => {
+    const tally = (key: any) => {
       const counts = new Map();
       for (const s of finished) {
-        for (const item of s[key] || []) {
+        for (const item of (s as any)[key] || []) {
           const k = String(item).toLowerCase().trim();
           if (!k) continue;
           counts.set(k, (counts.get(k) || 0) + 1);
@@ -72,7 +72,7 @@ export const listInterviews = async (req, res) => {
       }
       return Array.from(counts.entries())
         .map(([label, count]) => ({ label, count }))
-        .sort((a, b) => b.count - a.count)
+        .sort((a: any, b: any) => b.count - a.count)
         .slice(0, 8);
     };
 
@@ -81,7 +81,7 @@ export const listInterviews = async (req, res) => {
       .slice()
       .reverse()
       .slice(-12)
-      .map((s) => ({
+      .map((s: any) => ({
         id: s.id,
         score: s.score || 0,
         startedAt: s.startedAt,
@@ -89,7 +89,7 @@ export const listInterviews = async (req, res) => {
       }));
 
     res.json({
-      sessions: sessions.map((s) => ({
+      sessions: sessions.map((s: any) => ({
         id: s.id,
         purpose: s.purpose,
         role: s.role,
@@ -110,7 +110,7 @@ export const listInterviews = async (req, res) => {
         avgScore: avg,
         bestScore: best,
         overallScore: avg,
-        latestReadiness: finished[0]?.readinessScore ?? null,
+        latestReadiness: (finished[0] as any)?.readinessScore ?? null,
         dimensions,
         strengthsHeatmap: tally("strengths"),
         weaknessesHeatmap: tally("weaknesses"),
@@ -120,7 +120,7 @@ export const listInterviews = async (req, res) => {
       catalog: getCatalog(),
       voice: getVoiceStatus(),
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("listInterviews error:", error);
     res.status(500).json({ message: error.message });
   }
@@ -130,10 +130,10 @@ export const listInterviews = async (req, res) => {
 // POST /api/interviews/start
 //   body: { purpose, role, stage, medium, format, level, totalQuestions? }
 // ---------------------------------------------------------------------------
-export const startInterview = async (req, res) => {
+export const startInterview = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
-    const type = resolveTypeSelection(req.body || {});
+    const type: any = resolveTypeSelection(req.body || {});
     type.totalQuestions =
       Number(req.body?.totalQuestions) ||
       DEFAULT_QUESTION_BUDGET[type.purpose] ||
@@ -210,7 +210,7 @@ export const startInterview = async (req, res) => {
           careerFit: candidateContext.careerFit,
           type,
         });
-      } catch (e) {
+      } catch (e: any) {
         console.error("Retell call failed, falling back to text:", e.message);
         // fall through to text mode
         await prisma.interviewSession.update({
@@ -242,7 +242,7 @@ export const startInterview = async (req, res) => {
         ? "RETELL_API_KEY / RETELL_AGENT_ID not configured on the server. See backend/SETUP_VOICE_INTERVIEW.md."
         : null,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("startInterview error:", error);
     res.status(500).json({ message: error.message });
   }
@@ -252,14 +252,14 @@ export const startInterview = async (req, res) => {
 // POST /api/interviews/:id/turn   (text mode)
 //   body: { answer }
 // ---------------------------------------------------------------------------
-export const submitTurn = async (req, res) => {
+export const submitTurn = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
     const sessionId = Number(req.params.id);
     const answer = String(req.body?.answer || "").trim();
     if (!answer) return res.status(400).json({ message: "Answer is required" });
 
-    const session = await prisma.interviewSession.findFirst({
+    const session: any = await prisma.interviewSession.findFirst({
       where: { id: sessionId, userId },
     });
     if (!session) return res.status(404).json({ message: "Not found" });
@@ -270,7 +270,7 @@ export const submitTurn = async (req, res) => {
         .status(400)
         .json({ message: "Use the voice channel for this session" });
 
-    const turns = Array.isArray(session.turns) ? [...session.turns] : [];
+    const turns: any[] = Array.isArray(session.turns) ? [...session.turns] : [];
     const lastIdx = turns.length - 1;
     if (lastIdx < 0 || turns[lastIdx].answer != null)
       return res.status(400).json({ message: "No open question to answer" });
@@ -290,7 +290,7 @@ export const submitTurn = async (req, res) => {
 
     // Evaluate THIS answer in parallel with generating the next question —
     // they're independent calls so we save ~1 round-trip per turn.
-    const answered = turns.filter((t) => t.answer != null).length;
+    const answered = turns.filter((t: any) => t.answer != null).length;
     const isLast = answered >= session.totalQuestions;
 
     const [turnEval, nextQ] = await Promise.all([
@@ -324,11 +324,11 @@ export const submitTurn = async (req, res) => {
       feedback: turnEval.feedback,
       dims: turnEval.dims,
       nextQuestion: isLast ? null : nextQ?.question || null,
-      questionIndex: turns.filter((t) => t.answer != null).length + (isLast ? 0 : 1),
+      questionIndex: turns.filter((t: any) => t.answer != null).length + (isLast ? 0 : 1),
       totalQuestions: session.totalQuestions,
       isLast,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("submitTurn error:", error);
     res.status(500).json({ message: error.message });
   }
@@ -340,19 +340,19 @@ export const submitTurn = async (req, res) => {
 // Called by the frontend when the Retell WebRTC session disconnects — we
 // pull the finished call transcript from Retell, store it, and finalise.
 // ---------------------------------------------------------------------------
-export const endVoiceCall = async (req, res) => {
+export const endVoiceCall = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
     const sessionId = Number(req.params.id);
-    const session = await prisma.interviewSession.findFirst({
+    const session: any = await prisma.interviewSession.findFirst({
       where: { id: sessionId, userId },
     });
     if (!session) return res.status(404).json({ message: "Not found" });
     if (session.mode !== "voice")
       return res.status(400).json({ message: "Not a voice session" });
 
-    let transcript = [];
-    let durationSeconds = null;
+    let transcript: any = [];
+    let durationSeconds: any = null;
 
     if (session.retellCallId && isVoiceAvailable()) {
       try {
@@ -362,7 +362,7 @@ export const endVoiceCall = async (req, res) => {
           call?.end_timestamp && call?.start_timestamp
             ? Math.round((call.end_timestamp - call.start_timestamp) / 1000)
             : null;
-      } catch (e) {
+      } catch (e: any) {
         console.warn("Failed to fetch Retell call:", e.message);
       }
     }
@@ -383,7 +383,7 @@ export const endVoiceCall = async (req, res) => {
 
     // Auto-finalise voice sessions right after the call ends.
     return finalise(session.id, userId, res);
-  } catch (error) {
+  } catch (error: any) {
     console.error("endVoiceCall error:", error);
     res.status(500).json({ message: error.message });
   }
@@ -392,25 +392,25 @@ export const endVoiceCall = async (req, res) => {
 // ---------------------------------------------------------------------------
 // POST /api/interviews/:id/finish   (text mode)
 // ---------------------------------------------------------------------------
-export const finishInterview = async (req, res) => {
+export const finishInterview = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
     const sessionId = Number(req.params.id);
     return finalise(sessionId, userId, res);
-  } catch (error) {
+  } catch (error: any) {
     console.error("finishInterview error:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-async function finalise(sessionId, userId, res) {
-  const session = await prisma.interviewSession.findFirst({
+async function finalise(sessionId: any, userId: any, res: any) {
+  const session: any = await prisma.interviewSession.findFirst({
     where: { id: sessionId, userId },
   });
   if (!session) return res.status(404).json({ message: "Not found" });
 
   const turns = (Array.isArray(session.turns) ? session.turns : []).filter(
-    (t) => t.answer != null && t.answer !== ""
+    (t: any) => t.answer != null && t.answer !== ""
   );
 
   if (turns.length === 0) {
@@ -482,7 +482,7 @@ async function finalise(sessionId, userId, res) {
 // ---------------------------------------------------------------------------
 // POST /api/interviews/:id/abandon
 // ---------------------------------------------------------------------------
-export const abandonInterview = async (req, res) => {
+export const abandonInterview = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
     const sessionId = Number(req.params.id);
@@ -495,7 +495,7 @@ export const abandonInterview = async (req, res) => {
       data: { status: "abandoned", finishedAt: new Date() },
     });
     res.json({ sessionId, status: "abandoned" });
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
 };
@@ -503,18 +503,18 @@ export const abandonInterview = async (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /api/interviews/:id
 // ---------------------------------------------------------------------------
-export const getInterview = async (req, res) => {
+export const getInterview = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
     const sessionId = Number(req.params.id);
-    const session = await prisma.interviewSession.findFirst({
+    const session: any = await prisma.interviewSession.findFirst({
       where: { id: sessionId, userId },
     });
     if (!session) return res.status(404).json({ message: "Not found" });
     // Strip the heavy snapshot from the wire — frontend doesn't need it.
     const { contextSnapshot, agentPrompt, ...rest } = session;
     res.json(rest);
-  } catch (error) {
+  } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
 };
@@ -522,7 +522,7 @@ export const getInterview = async (req, res) => {
 // ---------------------------------------------------------------------------
 // POST /api/interviews/dial  (phone-call seam — leave wired for Phase 3)
 // ---------------------------------------------------------------------------
-export const dialCandidate = async (req, res) => {
+export const dialCandidate = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
     const toNumber = String(req.body?.phone || "").trim();
@@ -533,7 +533,7 @@ export const dialCandidate = async (req, res) => {
           "Phone-call mode requires RETELL_API_KEY + RETELL_AGENT_ID + RETELL_PHONE_NUMBER. See backend/SETUP_VOICE_INTERVIEW.md.",
       });
 
-    const type = resolveTypeSelection({ ...(req.body || {}), medium: "phone" });
+    const type: any = resolveTypeSelection({ ...(req.body || {}), medium: "phone" });
     type.totalQuestions =
       Number(req.body?.totalQuestions) ||
       DEFAULT_QUESTION_BUDGET[type.purpose] ||
@@ -587,7 +587,7 @@ export const dialCandidate = async (req, res) => {
       callId: call.call_id,
       message: "Phone call queued — your phone will ring shortly.",
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("dialCandidate error:", error);
     res.status(500).json({ message: error.message });
   }
