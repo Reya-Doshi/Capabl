@@ -1,7 +1,7 @@
 const GITHUB_USERNAME_RE = /github\.com\/([A-Za-z0-9-]+)\/?/i;
 const LINKEDIN_SLUG_RE = /linkedin\.com\/in\/([A-Za-z0-9-_]{3,100})\/?/i;
 
-const GITHUB_HEADERS = {
+const GITHUB_HEADERS: Record<string, string> = {
   "User-Agent": "Capabl-AI-Analyzer",
   Accept: "application/vnd.github+json",
   ...(process.env.GITHUB_TOKEN
@@ -11,7 +11,7 @@ const GITHUB_HEADERS = {
     : {}),
 };
 
-export function extractGithubUsername(url) {
+export function extractGithubUsername(url: any) {
   if (!url) return null;
   const raw = String(url).trim().replace(/\/$/, "");
   const m = raw.match(GITHUB_USERNAME_RE);
@@ -20,13 +20,13 @@ export function extractGithubUsername(url) {
   return null;
 }
 
-export function extractLinkedInSlug(url) {
+export function extractLinkedInSlug(url: any) {
   if (!url) return null;
   const m = String(url).match(LINKEDIN_SLUG_RE);
   return m ? m[1] : null;
 }
 
-async function safeFetchJson(url) {
+async function safeFetchJson(url: any, _ignored?: any): Promise<any> {
   try {
     const r = await fetch(url, { headers: GITHUB_HEADERS });
     console.log("GitHub rate limit remaining:", r.headers.get("x-ratelimit-remaining"));
@@ -52,7 +52,7 @@ async function safeFetchJson(url) {
   }
 }
 
-async function safeFetchText(url) {
+async function safeFetchText(url: any): Promise<any> {
   try {
     const r = await fetch(url, {
       headers: {
@@ -75,7 +75,7 @@ async function safeFetchText(url) {
   }
 }
 
-export async function fetchGithubProfile(url) {
+export async function fetchGithubProfile(url: any): Promise<any> {
   const username = extractGithubUsername(url);
   if (!username) {
     return {
@@ -112,14 +112,14 @@ export async function fetchGithubProfile(url) {
   );
 
   const repoList = Array.isArray(reposResult?.data) ? reposResult.data : [];
-  const ownRepos = repoList.filter((r) => !r.fork);
+  const ownRepos = repoList.filter((r: any) => !r.fork);
 
   const totalStars = ownRepos.reduce(
-    (acc, r) => acc + (r.stargazers_count || 0),
+    (acc: number, r: any) => acc + (r.stargazers_count || 0),
     0
   );
 
-  const languageCounts = {};
+  const languageCounts: Record<string, number> = {};
   for (const r of ownRepos) {
     if (r.language) {
       const k = String(r.language).toLowerCase();
@@ -134,11 +134,11 @@ export async function fetchGithubProfile(url) {
   const topRepos = ownRepos
     .slice()
     .sort(
-      (a, b) =>
+      (a: any, b: any) =>
         (b.stargazers_count || 0) - (a.stargazers_count || 0)
     )
     .slice(0, 5)
-    .map((r) => ({
+    .map((r: any) => ({
       name: r.name,
       description: r.description,
       language: r.language,
@@ -156,21 +156,21 @@ export async function fetchGithubProfile(url) {
     }));
 
   const detailedTopRepos = await Promise.all(
-    topRepos.map(async (repo) => {
+    topRepos.map(async (repo: any) => {
       const [languageMapResult, readme, repoTopicsResult] = await Promise.all([
         safeFetchJson(repo.languagesUrl),
         safeFetchText(`${repo.repoUrl}/readme`),
         safeFetchJson(`${repo.repoUrl}/topics`, {
           Accept: "application/vnd.github+json",
-        }),
+        } as any),
       ]);
 
       const languageMap = languageMapResult?.data;
       const repoTopics = repoTopicsResult?.data;
 
-      const languageEntries = languageMap ? Object.entries(languageMap) : [];
+      const languageEntries: any[] = languageMap ? Object.entries(languageMap) : [];
       const languages = languageEntries
-        .sort((a, b) => b[1] - a[1])
+        .sort((a: any, b: any) => b[1] - a[1])
         .map(([name]) => name)
         .filter(Boolean);
 
@@ -202,7 +202,7 @@ export async function fetchGithubProfile(url) {
   };
 }
 
-export function scoreGithub(profile, careerSkillKeys) {
+export function scoreGithub(profile: any, careerSkillKeys: any) {
   if (!profile || !profile.ok) {
     return {
       score: 0,
@@ -216,13 +216,13 @@ export function scoreGithub(profile, careerSkillKeys) {
   const starScore = Math.min(20, profile.totalStars * 2);
 
   const profileLangs = new Set(
-    profile.topLanguages.map((l) => l.name.toLowerCase())
+    profile.topLanguages.map((l: any) => l.name.toLowerCase())
   );
   const required = new Set(
-    (careerSkillKeys || []).map((s) => s.toLowerCase())
+    (careerSkillKeys || []).map((s: any) => s.toLowerCase())
   );
-  const matched = [...required].filter((s) =>
-    [...profileLangs].some((pl) => pl.includes(s) || s.includes(pl))
+  const matched = [...required].filter((s: any) =>
+    [...profileLangs].some((pl: any) => pl.includes(s) || s.includes(pl))
   );
 
   const languageMatchScore = required.size
@@ -246,7 +246,7 @@ export function scoreGithub(profile, careerSkillKeys) {
   };
 }
 
-export function scoreLinkedIn(url) {
+export function scoreLinkedIn(url: any) {
   if (!url || !String(url).trim()) {
     return {
       score: 0,

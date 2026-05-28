@@ -1,4 +1,4 @@
-// interviewTypes.js
+// interviewTypes.ts
 // -----------------------------------------------------------------------------
 // Catalog of interview types across the 5 axes the product surfaces:
 //   purpose × role × stage × medium × format
@@ -23,7 +23,7 @@ export const DEFAULT_WEIGHTS = {
 };
 
 // ----- PURPOSE ---------------------------------------------------------------
-export const PURPOSES = [
+export const PURPOSES: any[] = [
   {
     key: "screening",
     label: "Screening Interview",
@@ -87,7 +87,7 @@ export const PURPOSES = [
 ];
 
 // ----- ROLE-SHAPED INTERVIEWS -----------------------------------------------
-export const ROLES = [
+export const ROLES: any[] = [
   {
     key: "standard",
     label: "Standard",
@@ -133,7 +133,7 @@ export const ROLES = [
 ];
 
 // ----- STAGE ----------------------------------------------------------------
-export const STAGES = [
+export const STAGES: any[] = [
   {
     key: "first",
     label: "First Round",
@@ -152,7 +152,7 @@ export const STAGES = [
 ];
 
 // ----- MEDIUM ---------------------------------------------------------------
-export const MEDIUMS = [
+export const MEDIUMS: any[] = [
   {
     key: "ai",
     label: "AI Interview",
@@ -174,7 +174,7 @@ export const MEDIUMS = [
 ];
 
 // ----- FORMAT ---------------------------------------------------------------
-export const FORMATS = [
+export const FORMATS: any[] = [
   {
     key: "one-on-one",
     label: "One-on-One",
@@ -195,7 +195,7 @@ export const FORMATS = [
 export const LEVELS = ["easy", "medium", "hard"];
 
 // Default question budgets per purpose, used when the UI doesn't override.
-export const DEFAULT_QUESTION_BUDGET = {
+export const DEFAULT_QUESTION_BUDGET: Record<string, number> = {
   screening: 5,
   technical: 6,
   behavioral: 5,
@@ -207,7 +207,7 @@ export const DEFAULT_QUESTION_BUDGET = {
 };
 
 // ----- Lookups --------------------------------------------------------------
-const byKey = (arr) => Object.fromEntries(arr.map((x) => [x.key, x]));
+const byKey = (arr: any[]) => Object.fromEntries(arr.map((x) => [x.key, x]));
 export const PURPOSE_MAP = byKey(PURPOSES);
 export const ROLE_MAP = byKey(ROLES);
 export const STAGE_MAP = byKey(STAGES);
@@ -221,7 +221,7 @@ export function resolveTypeSelection({
   medium,
   format,
   level,
-}) {
+}: any) {
   return {
     purpose: PURPOSE_MAP[purpose] ? purpose : "technical",
     role: ROLE_MAP[role] ? role : "standard",
@@ -232,14 +232,14 @@ export function resolveTypeSelection({
   };
 }
 
-export function resolveWeights(purposeKey) {
+export function resolveWeights(purposeKey: any) {
   return PURPOSE_MAP[purposeKey]?.weights || DEFAULT_WEIGHTS;
 }
 
 export function getCatalog() {
   // Strip prompt overlays from the wire payload — they're internal.
-  const strip = (arr) =>
-    arr.map(({ promptOverlay, weights, ...rest }) => rest);
+  const strip = (arr: any[]) =>
+    arr.map(({ promptOverlay, weights, ...rest }: any) => rest);
   return {
     purposes: strip(PURPOSES),
     roles: strip(ROLES),

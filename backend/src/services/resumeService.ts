@@ -5,20 +5,20 @@ import path from "path";
 // subpath import (`pdf-parse/lib/pdf-parse.js`) was removed in v2 and v1's
 // default export was a function. Support both so the extractor keeps working
 // across versions.
-let pdfParseFn = null;
+let pdfParseFn: any = null;
 async function getPdfParse() {
   if (pdfParseFn) return pdfParseFn;
   try {
-    const mod = await import("pdf-parse");
+    const mod: any = await import("pdf-parse");
     if (typeof mod.default === "function") {
       // v1: default export is `(buffer) => { text }`
-      pdfParseFn = async (buf) => {
+      pdfParseFn = async (buf: any) => {
         const r = await mod.default(buf);
         return r?.text || "";
       };
     } else if (mod.PDFParse) {
       // v2: class with instance.getText()
-      pdfParseFn = async (buf) => {
+      pdfParseFn = async (buf: any) => {
         const p = new mod.PDFParse({ data: buf });
         const r = await p.getText();
         return r?.text || "";
@@ -33,7 +33,7 @@ async function getPdfParse() {
 // Last-resort fallback when pdf-parse can't load or fails on a specific file.
 // Pulls printable ASCII runs (length >= 4) out of the binary so keyword
 // matching still has something to chew on, without dumping raw garbage.
-function extractPrintableStrings(buf) {
+function extractPrintableStrings(buf: any) {
   const text = buf.toString("latin1");
   const matches = text.match(/[\x20-\x7E]{4,}/g) || [];
   return matches.join(" ");
@@ -88,7 +88,7 @@ const URL_BLOCKLIST = [
   "schemas.microsoft.com",
 ];
 
-function isUsefulUrl(u) {
+function isUsefulUrl(u: any) {
   if (!u) return false;
   const lower = u.toLowerCase();
   if (URL_BLOCKLIST.some((b) => lower.includes(b))) return false;
@@ -96,12 +96,12 @@ function isUsefulUrl(u) {
   return /^https?:\/\/[a-z0-9.-]+\.[a-z]{2,}/i.test(u);
 }
 
-function cleanUrl(u) {
+function cleanUrl(u: any) {
   return u.replace(/[),.;:'"]+$/g, "");
 }
 
 // Remove PDF/XML metadata noise that pdf-parse sometimes leaves behind.
-function cleanResumeText(raw) {
+function cleanResumeText(raw: any) {
   if (!raw) return "";
   return raw
     // strip XML/XMP metadata tags like <x:xmpmeta ...>
@@ -114,7 +114,7 @@ function cleanResumeText(raw) {
     .trim();
 }
 
-export async function extractResumeText(resumePath) {
+export async function extractResumeText(resumePath: any) {
   if (!resumePath) return "";
 
   const abs = path.isAbsolute(resumePath)
@@ -143,7 +143,7 @@ export async function extractResumeText(resumePath) {
   return cleanResumeText(extractPrintableStrings(buf));
 }
 
-export function analyzeResumeText(text, requiredSkills) {
+export function analyzeResumeText(text: any, requiredSkills: any) {
   if (!text || !text.trim()) {
     return {
       ok: false,
@@ -164,11 +164,11 @@ export function analyzeResumeText(text, requiredSkills) {
 
   const sectionsFound = SECTION_HEADERS.filter((h) => lower.includes(h));
 
-  const foundSkills = (requiredSkills || []).filter((s) =>
+  const foundSkills = (requiredSkills || []).filter((s: any) =>
     lower.includes(String(s).toLowerCase())
   );
   const missingKeywords = (requiredSkills || []).filter(
-    (s) => !lower.includes(String(s).toLowerCase())
+    (s: any) => !lower.includes(String(s).toLowerCase())
   );
 
   const genericHits = ATS_KEYWORDS_GENERIC.filter((k) =>

@@ -1,4 +1,4 @@
-// candidateContext.js
+// candidateContext.ts
 // -----------------------------------------------------------------------------
 // Single source of truth for "everything we know about this candidate" — used
 // to turn a generic interview into a personalised one.
@@ -22,7 +22,7 @@
 import prisma from "../config/db.js";
 import { runAnalysis } from "./analysisService.js";
 
-async function loadManualProgress(userId) {
+async function loadManualProgress(userId: any) {
   try {
     const [skills, weekly] = await Promise.all([
       prisma.skillProgress.findMany({
@@ -35,7 +35,7 @@ async function loadManualProgress(userId) {
       }),
     ]);
     return {
-      manualSkills: skills.map((s) => s.skillName),
+      manualSkills: skills.map((s: any) => s.skillName),
       weeklyProgress: weekly,
     };
   } catch {
@@ -46,13 +46,13 @@ async function loadManualProgress(userId) {
 // Build the projects array from whichever AIAnalysis fields the user has
 // populated. We accept either parallel arrays (titles/descs/tech) OR the
 // `savedProjects` JSON-string array that the Projects page writes.
-function buildProjects(ai) {
+function buildProjects(ai: any) {
   if (!ai) return [];
 
   // Modern shape: parallel arrays per project.
   const titles = ai.projectTitles || [];
   if (titles.length > 0) {
-    return titles.map((title, i) => ({
+    return titles.map((title: any, i: number) => ({
       title,
       status: ai.projectStatuses?.[i] || null,
       description: ai.projectDescriptions?.[i] || null,
@@ -62,7 +62,7 @@ function buildProjects(ai) {
 
   // Fallback: a single JSON blob per project saved to `savedProjects`.
   return (ai.savedProjects || [])
-    .map((raw) => {
+    .map((raw: any) => {
       try {
         const j = JSON.parse(raw);
         return {
@@ -78,26 +78,26 @@ function buildProjects(ai) {
     .filter(Boolean);
 }
 
-function parseTechTags(value) {
+function parseTechTags(value: any): string[] {
   if (!value) return [];
   if (Array.isArray(value)) return value.map(String).filter(Boolean);
   // Could be "react, node, mongodb" or "react,node" — split on comma/pipe.
   return String(value)
     .split(/[,|·•]/g)
-    .map((s) => s.trim())
+    .map((s: string) => s.trim())
     .filter(Boolean);
 }
 
-function pickStrengths(analysis, ai) {
+function pickStrengths(analysis: any, ai: any) {
   const list = [
     ...(ai?.strengths || []),
     ...(analysis?.skillStrengths || []),
-    ...((analysis?.strengthsText || []).map((s) => s.title) || []),
+    ...((analysis?.strengthsText || []).map((s: any) => s.title) || []),
   ];
   return Array.from(new Set(list)).slice(0, 8);
 }
 
-function pickWeaknesses(analysis, ai) {
+function pickWeaknesses(analysis: any, ai: any) {
   const list = [
     ...(ai?.weaknesses || []),
     ...(analysis?.skillGaps || []),
@@ -105,10 +105,10 @@ function pickWeaknesses(analysis, ai) {
   return Array.from(new Set(list)).slice(0, 8);
 }
 
-function pickRoadmapSnapshot(analysis) {
+function pickRoadmapSnapshot(analysis: any) {
   const stages = analysis?.roadmapStages || [];
-  const active = stages.find((s) => s.status === "active");
-  const completed = stages.filter((s) => s.status === "completed").length;
+  const active = stages.find((s: any) => s.status === "active");
+  const completed = stages.filter((s: any) => s.status === "completed").length;
   return {
     totalStages: stages.length,
     completedStages: completed,
@@ -117,14 +117,14 @@ function pickRoadmapSnapshot(analysis) {
       : null,
     overallProgress: stages.length
       ? Math.round(
-          stages.reduce((acc, s) => acc + (s.progress || 0), 0) / stages.length
+          stages.reduce((acc: number, s: any) => acc + (s.progress || 0), 0) / stages.length
         )
       : 0,
   };
 }
 
-export async function buildCandidateContext(userId) {
-  const user = await prisma.user.findUnique({
+export async function buildCandidateContext(userId: any) {
+  const user: any = await prisma.user.findUnique({
     where: { id: userId },
     include: { skills: true, aiAnalysis: true },
   });
@@ -132,11 +132,11 @@ export async function buildCandidateContext(userId) {
 
   const { manualSkills, weeklyProgress } = await loadManualProgress(userId);
 
-  let analysis;
+  let analysis: any;
   try {
     analysis = await runAnalysis({
       user,
-      skills: user.skills.map((s) => s.name),
+      skills: user.skills.map((s: any) => s.name),
       careerGoal: user.careerGoal,
       resumePath: user.resume,
       githubUrl: user.github,
@@ -144,7 +144,7 @@ export async function buildCandidateContext(userId) {
       manualSkills,
       weeklyProgress,
     });
-  } catch (e) {
+  } catch (e: any) {
     // Resume parse can fail on weird PDFs — keep going with a minimal context.
     console.warn("[candidateContext] runAnalysis failed:", e.message);
     analysis = null;
@@ -153,7 +153,7 @@ export async function buildCandidateContext(userId) {
   const ai = user.aiAnalysis;
 
   const projects = buildProjects(ai);
-  const profileSkills = user.skills.map((s) => s.name);
+  const profileSkills = user.skills.map((s: any) => s.name);
 
   return {
     userId,
@@ -217,7 +217,7 @@ export async function buildCandidateContext(userId) {
     roadmap: pickRoadmapSnapshot(analysis),
 
     aiSummary: ai?.aiSummary || null,
-    aiSuggestions: (analysis?.aiSuggestions || []).map((s) =>
+    aiSuggestions: (analysis?.aiSuggestions || []).map((s: any) =>
       typeof s === "string" ? s : `${s.title}: ${s.description}`
     ),
   };
@@ -226,8 +226,8 @@ export async function buildCandidateContext(userId) {
 // Compact, prompt-ready text version of the context. Used inside system
 // prompts where token budgets matter — drop only the headline facts so the
 // interviewer can reason about them.
-export function contextToPromptBlock(ctx) {
-  const lines = [];
+export function contextToPromptBlock(ctx: any) {
+  const lines: string[] = [];
   lines.push(`CANDIDATE: ${ctx.identity.name}`);
   if (ctx.identity.careerGoal)
     lines.push(`CAREER GOAL: ${ctx.identity.careerGoal}`);
@@ -295,7 +295,7 @@ export function contextToPromptBlock(ctx) {
   return lines.join("\n");
 }
 
-function truncate(s, n) {
+function truncate(s: any, n: number) {
   if (!s) return "";
   return s.length > n ? s.slice(0, n - 1) + "…" : s;
 }

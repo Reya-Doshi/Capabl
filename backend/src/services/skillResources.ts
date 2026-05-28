@@ -2,7 +2,7 @@
 // roadmap card stays scannable. Falls back to a generic "search" link if a
 // skill is missing here.
 
-const SKILL_RESOURCES = {
+const SKILL_RESOURCES: Record<string, any[]> = {
   git: [
     { title: "Pro Git (free book)", url: "https://git-scm.com/book/en/v2", type: "doc" },
     { title: "Learn Git Branching", url: "https://learngitbranching.js.org/", type: "interactive" },
@@ -171,7 +171,7 @@ const SKILL_RESOURCES = {
   ],
 };
 
-export function resourcesForSkill(skill) {
+export function resourcesForSkill(skill: any) {
   if (!skill) return [];
   const key = String(skill).toLowerCase().trim();
   if (SKILL_RESOURCES[key]) return SKILL_RESOURCES[key];

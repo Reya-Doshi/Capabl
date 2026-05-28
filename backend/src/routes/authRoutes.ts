@@ -38,7 +38,7 @@ router.get(
     session: false,
   }),
 
-  async (req, res) => {
+  async (req: any, res: any) => {
 
     try {
 
@@ -49,7 +49,7 @@ router.get(
           email: req.user.email,
         },
 
-        process.env.JWT_SECRET,
+        process.env.JWT_SECRET as string,
 
         {
           expiresIn: "7d",
