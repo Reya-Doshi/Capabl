@@ -6,18 +6,18 @@ const prisma = new PrismaClient();
 passport.use(
   new GoogleStrategy(
     {
-      clientID: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      clientID: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
       callbackURL: "http://localhost:5000/api/auth/google/callback",
     },
 
-    async (accessToken, refreshToken, profile, done) => {
+    async (accessToken: string, refreshToken: string, profile: any, done: any) => {
 
   try {
 
     const email = profile.emails[0].value;
 
-    let user = await prisma.user.findUnique({
+    let user: any = await prisma.user.findUnique({
       where: { email },
     });
 
@@ -52,7 +52,7 @@ passport.use(
   }
 
 }
-    
+
   )
 );
 

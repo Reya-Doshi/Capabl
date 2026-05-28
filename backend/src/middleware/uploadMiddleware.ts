@@ -10,7 +10,7 @@ if (!fs.existsSync(uploadDir)) {
 
 const allowed = new Set([".pdf", ".doc", ".docx"]);
 
-function removeExistingResumesForUser(userId) {
+function removeExistingResumesForUser(userId: any) {
   if (userId === "anon") return;
   try {
     const files = fs.readdirSync(uploadDir);
@@ -30,10 +30,10 @@ function removeExistingResumesForUser(userId) {
 }
 
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
+  destination: (req: any, file: any, cb: any) => {
     cb(null, uploadDir);
   },
-  filename: (req, file, cb) => {
+  filename: (req: any, file: any, cb: any) => {
     const userId = req.user?.id ?? "anon";
     const ext = path.extname(file.originalname).toLowerCase();
     removeExistingResumesForUser(userId);
@@ -41,7 +41,7 @@ const storage = multer.diskStorage({
   },
 });
 
-const fileFilter = (req, file, cb) => {
+const fileFilter = (req: any, file: any, cb: any) => {
   const ext = path.extname(file.originalname).toLowerCase();
   if (!allowed.has(ext)) {
     return cb(
