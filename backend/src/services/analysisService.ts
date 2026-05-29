@@ -9,7 +9,193 @@ import {
 } from "./socialService.js";
 import { resourcesForSkill } from "./skillResources.js";
 
-const ROLE_SKILLS = {
+// ---------------------------------------------------------------------------
+// Domain types
+// ---------------------------------------------------------------------------
+
+type RoleKey =
+  | "full stack"
+  | "frontend"
+  | "backend"
+  | "ai engineer"
+  | "data scientist"
+  | "data analyst"
+  | "devops"
+  | "mobile";
+
+type SkillSource = "manual" | "resume" | "profile";
+
+type StageStatus = "locked" | "active" | "completed";
+
+interface RoadmapSkill {
+  name: string;
+  known: boolean;
+  source: SkillSource | null;
+  resources: ReturnType<typeof resourcesForSkill>;
+}
+
+interface RoadmapStage {
+  stage: string;
+  title: string;
+  skills: RoadmapSkill[];
+  knownSkills: string[];
+  gapSkills: string[];
+  knownCount: number;
+  total: number;
+  progress: number;
+  status: StageStatus;
+}
+
+interface WeeklyTask {
+  key: string;
+  label: string;
+  done: boolean;
+}
+
+interface WeeklyPlan {
+  week: number;
+  title: string;
+  focus: string[];
+  tasks: WeeklyTask[];
+  goal: string;
+}
+
+interface WeeklyDoneEntry {
+  week: number;
+  taskKey: string;
+}
+
+interface BuildRoadmapOptions {
+  resumeSkills: string[];
+  profileSkills: string[];
+  manualSkills: string[];
+  weeklyDone: WeeklyDoneEntry[];
+}
+
+interface SkillSets {
+  resumeSet: Set<string>;
+  profileSet: Set<string>;
+  manualSet: Set<string>;
+}
+
+// Shapes returned by the imported service modules
+// (adjust if you have stricter definitions in those files)
+interface ResumeAnalysis {
+  ok: boolean;
+  resumeScore: number;
+  atsScore: number;
+  foundSkills: string[];
+  missingKeywords: string[];
+  sectionsFound: string[];
+  wordCount: number;
+  contact: Record<string, string>;
+  breakdown?: unknown;
+}
+
+interface GithubProfile {
+  ok: boolean;
+  reason?: string;
+  ownRepoCount?: number;
+  totalStars?: number;
+  languageBytes?: Record<string, number>;
+}
+
+interface GithubScoreResult {
+  score: number;
+  breakdown?: unknown;
+  languagesMatched?: string[];
+}
+
+interface LinkedInScoreResult {
+  score: number;
+  ok?: boolean;
+  reason?: string;
+}
+
+interface StrengthEntry {
+  title: string;
+  description: string;
+  status: string;
+  color: string;
+}
+
+interface SuggestionEntry {
+  title: string;
+  description: string;
+}
+
+interface SkillProficiencyEntry {
+  name: string;
+  level: "Confident" | "Practising" | "Beginner";
+  currentPct: number;
+  targetPct: number;
+  gapPct: number;
+  evidence: string[];
+  known: boolean;
+}
+
+// Input / output types for runAnalysis
+interface RunAnalysisInput {
+  user?: {
+    college?: string;
+    bio?: string;
+    github?: string;
+    linkedin?: string;
+    age?: number | string;
+    careerGoal?: string;
+  };
+  skills?: string[];
+  careerGoal?: string;
+  resumePath?: string;
+  githubUrl?: string;
+  linkedinUrl?: string;
+  manualSkills?: string[];
+  weeklyProgress?: WeeklyDoneEntry[];
+}
+
+interface RunAnalysisResult {
+  careerFit: string;
+  targetRole: RoleKey;
+  readinessScore: number;
+  matchScore: number;
+  profileCompleteness: number;
+  skillCountScore: number;
+  skillStrengths: string[];
+  skillGaps: string[];
+  recommendedSkills: string[];
+  extractedSkills: string[];
+  requiredSkills: string[];
+  skillProficiency: SkillProficiencyEntry[];
+  roadmap: WeeklyPlan[];
+  roadmapStages: RoadmapStage[];
+  resume: {
+    score: number;
+    atsScore: number;
+    foundSkills: string[];
+    missingKeywords: string[];
+    sectionsFound: string[];
+    wordCount: number;
+    contact: Record<string, string>;
+    ok: boolean;
+    breakdown?: unknown;
+  };
+  github: {
+    score: number;
+    breakdown?: unknown;
+    languagesMatched?: string[];
+    profile: GithubProfile;
+  };
+  linkedin: LinkedInScoreResult;
+  recruiterVisibility: number;
+  strengthsText: StrengthEntry[];
+  aiSuggestions: SuggestionEntry[];
+}
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const ROLE_SKILLS: Record<RoleKey, string[]> = {
   "full stack": [
     "html",
     "css",
@@ -105,9 +291,9 @@ const ROLE_SKILLS = {
   ],
 };
 
-const DEFAULT_ROLE = "full stack";
+const DEFAULT_ROLE: RoleKey = "full stack";
 
-const SKILL_ALIASES = {
+const SKILL_ALIASES: Record<string, string> = {
   js: "javascript",
   ts: "typescript",
   reactjs: "react",
@@ -130,34 +316,16 @@ const SKILL_ALIASES = {
   "ci cd": "ci/cd",
 };
 
-function normaliseSkill(raw) {
-  if (!raw) return "";
-  const s = String(raw).toLowerCase().trim();
-  return SKILL_ALIASES[s] || s;
+// ---------------------------------------------------------------------------
+// Roadmap templates
+// ---------------------------------------------------------------------------
+
+interface RoadmapTemplateStage {
+  title: string;
+  core: string[];
 }
 
-function resolveRoleKey(careerGoal) {
-  if (!careerGoal) return DEFAULT_ROLE;
-  const goal = careerGoal.toLowerCase();
-  const exact = Object.keys(ROLE_SKILLS).find((k) => goal.includes(k));
-  if (exact) return exact;
-  if (goal.includes("front")) return "frontend";
-  if (goal.includes("back")) return "backend";
-  if (goal.includes("ai") || goal.includes("ml")) return "ai engineer";
-  if (goal.includes("data")) return "data analyst";
-  if (goal.includes("devops") || goal.includes("cloud")) return "devops";
-  if (
-    goal.includes("mobile") ||
-    goal.includes("android") ||
-    goal.includes("ios")
-  )
-    return "mobile";
-  return DEFAULT_ROLE;
-}
-
-// Role-specific roadmap templates. Stage `core` lists are drawn from each
-// role's ROLE_SKILLS so the roadmap a user sees actually matches their goal.
-const ROADMAP_TEMPLATES = {
+const ROADMAP_TEMPLATES: Record<RoleKey, RoadmapTemplateStage[]> = {
   "full stack": [
     { title: "Foundations", core: ["git", "html", "css"] },
     { title: "Core Skills", core: ["javascript", "react", "node", "express"] },
@@ -216,25 +384,54 @@ const ROADMAP_TEMPLATES = {
   ],
 };
 
-// Source of truth for whether a skill is "known":
-//   - resumeSkills: parsed from the uploaded resume
-//   - profileSkills: skills the user listed in their profile
-//   - manualSkills:  skills the user explicitly marked complete on the roadmap
-// `sourceFor(skill)` returns whichever applies, in priority order, so the UI
-// can show "from resume" / "from profile" / "marked done" badges.
-function sourceFor(skill, { resumeSet, profileSet, manualSet }) {
+// ---------------------------------------------------------------------------
+// Pure helpers
+// ---------------------------------------------------------------------------
+
+function normaliseSkill(raw: unknown): string {
+  if (!raw) return "";
+  const s = String(raw).toLowerCase().trim();
+  return SKILL_ALIASES[s] || s;
+}
+
+function resolveRoleKey(careerGoal?: string): RoleKey {
+  if (!careerGoal) return DEFAULT_ROLE;
+  const goal = careerGoal.toLowerCase();
+  const exact = (Object.keys(ROLE_SKILLS) as RoleKey[]).find((k) =>
+    goal.includes(k)
+  );
+  if (exact) return exact;
+  if (goal.includes("front")) return "frontend";
+  if (goal.includes("back")) return "backend";
+  if (goal.includes("ai") || goal.includes("ml")) return "ai engineer";
+  if (goal.includes("data")) return "data analyst";
+  if (goal.includes("devops") || goal.includes("cloud")) return "devops";
+  if (
+    goal.includes("mobile") ||
+    goal.includes("android") ||
+    goal.includes("ios")
+  )
+    return "mobile";
+  return DEFAULT_ROLE;
+}
+
+function sourceFor(skill: string, { resumeSet, profileSet, manualSet }: SkillSets): SkillSource | null {
   if (manualSet.has(skill)) return "manual";
   if (resumeSet.has(skill)) return "resume";
   if (profileSet.has(skill)) return "profile";
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// Roadmap builder
+// ---------------------------------------------------------------------------
+
 function buildRoadmap(
-  careerFit,
-  roleKey,
-  { resumeSkills, profileSkills, manualSkills, weeklyDone }
-) {
-  const tpl =
+  careerFit: string,
+  roleKey: RoleKey,
+  { resumeSkills, profileSkills, manualSkills, weeklyDone }: BuildRoadmapOptions
+): { weeks: WeeklyPlan[]; stages: RoadmapStage[] } {
+  const tpl: RoadmapTemplateStage[] =
     ROADMAP_TEMPLATES[roleKey] || ROADMAP_TEMPLATES["full stack"];
 
   const resumeSet = new Set((resumeSkills || []).map((s) => s.toLowerCase()));
@@ -243,8 +440,8 @@ function buildRoadmap(
   const knownSet = new Set([...resumeSet, ...profileSet, ...manualSet]);
 
   // First pass: shape stages with per-skill `known` + `source` + `resources`.
-  const stages = tpl.map((s, i) => {
-    const skills = s.core.map((name) => {
+  const stages: RoadmapStage[] = tpl.map((s, i) => {
+    const skills: RoadmapSkill[] = s.core.map((name) => {
       const known = knownSet.has(name);
       return {
         name,
@@ -273,9 +470,7 @@ function buildRoadmap(
   });
 
   // Sequential gating: Stage N is only ever `active` or `completed` if Stage
-  // N-1 is `completed`. This is the Duolingo-style behavior — even if the
-  // user happens to have all Stage 5 skills, Stage 5 stays locked until
-  // Stages 1-4 are fully done.
+  // N-1 is `completed`.
   let prevCompleted = true; // first stage is always unlocked
   for (const stage of stages) {
     if (!prevCompleted) {
@@ -292,7 +487,6 @@ function buildRoadmap(
   }
 
   // Weekly plan: 2 gap-skills per week, in priority order (fundamentals first).
-  // Only show weeks for skills the user does NOT yet know.
   const allGaps = stages.flatMap((s) => s.gapSkills);
   const uniqueGaps = Array.from(new Set(allGaps));
   const fundamentals = ["git", "html", "css", "javascript", "dsa"];
@@ -305,11 +499,11 @@ function buildRoadmap(
     (weeklyDone || []).map((w) => `${w.week}::${w.taskKey}`)
   );
 
-  const weeks = [];
+  const weeks: WeeklyPlan[] = [];
   let week = 1;
   for (let i = 0; i < ordered.length; i += 2) {
     const focusNames = ordered.slice(i, i + 2);
-    const tasks = focusNames.map((name) => ({
+    const tasks: WeeklyTask[] = focusNames.map((name) => ({
       key: name,
       label: `Study and build a small project with ${name}`,
       done: doneKeys.has(`${week}::${name}`) || knownSet.has(name),
@@ -347,6 +541,10 @@ function buildRoadmap(
   return { weeks, stages };
 }
 
+// ---------------------------------------------------------------------------
+// Main export
+// ---------------------------------------------------------------------------
+
 export async function runAnalysis({
   user,
   skills,
@@ -356,7 +554,7 @@ export async function runAnalysis({
   linkedinUrl,
   manualSkills = [],
   weeklyProgress = [],
-}) {
+}: RunAnalysisInput): Promise<RunAnalysisResult> {
   const roleKey = resolveRoleKey(careerGoal || user?.careerGoal);
   const required = ROLE_SKILLS[roleKey];
 
@@ -367,7 +565,7 @@ export async function runAnalysis({
     .map(normaliseSkill)
     .filter(Boolean);
 
-  let resumeAnalysis = {
+  let resumeAnalysis: ResumeAnalysis = {
     ok: false,
     resumeScore: 0,
     atsScore: 0,
@@ -380,14 +578,14 @@ export async function runAnalysis({
 
   if (resumePath) {
     const resumeText = await extractResumeText(resumePath);
-    resumeAnalysis = analyzeResumeText(resumeText, required);
+    resumeAnalysis = analyzeResumeText(resumeText, required) as ResumeAnalysis;
   }
 
   const resumeSkillList = (resumeAnalysis.foundSkills || []).map(
     normaliseSkill
   );
 
-  const userSkills = new Set([
+  const userSkills = new Set<string>([
     ...profileSkills,
     ...resumeSkillList,
     ...manualSkillList,
@@ -415,12 +613,12 @@ export async function runAnalysis({
     (profileFilled / profileFields.length) * 100
   );
 
-  const githubProfile = githubUrl
+  const githubProfile: GithubProfile = githubUrl
     ? await fetchGithubProfile(githubUrl)
     : { ok: false, reason: "No GitHub URL" };
-  const githubScoreResult = scoreGithub(githubProfile, required);
+  const githubScoreResult: GithubScoreResult = scoreGithub(githubProfile, required);
 
-  const linkedinScoreResult = scoreLinkedIn(linkedinUrl);
+  const linkedinScoreResult: LinkedInScoreResult = scoreLinkedIn(linkedinUrl);
 
   const skillCountScore = Math.min(100, userSkillList.length * 10);
 
@@ -459,7 +657,7 @@ export async function runAnalysis({
     }
   );
 
-  const strengthsText = [];
+  const strengthsText: StrengthEntry[] = [];
   if (strengths.length >= 5)
     strengthsText.push({
       title: "Strong technical skill coverage",
@@ -489,7 +687,7 @@ export async function runAnalysis({
       color: "bg-[#e7f7ea] text-green-700",
     });
 
-  const aiSuggestions = [];
+  const aiSuggestions: SuggestionEntry[] = [];
   if (resumeAnalysis.missingKeywords.length)
     aiSuggestions.push({
       title: "Add missing role keywords",
@@ -515,7 +713,7 @@ export async function runAnalysis({
       title: "Improve LinkedIn",
       description: linkedinScoreResult.ok
         ? "Add a headline that mentions your target role and update your About section."
-        : linkedinScoreResult.reason,
+        : linkedinScoreResult.reason ?? "",
     });
   if (resumeAnalysis.wordCount < 200)
     aiSuggestions.push({
@@ -523,29 +721,29 @@ export async function runAnalysis({
       description: `Resume is only ${resumeAnalysis.wordCount} words — add measurable bullet points to projects/experience.`,
     });
 
-  // Per-skill proficiency with evidence — used by the Skill Gap page so the
-  // gap % is grounded in real signals (resume / profile / GitHub / completed
-  // roadmap stages) instead of synthetic stage-index math.
-  const githubLangs = new Set(
+  // Per-skill proficiency with evidence
+  const githubLangs = new Set<string>(
     Object.keys(githubProfile?.languageBytes || {}).map((l) =>
       normaliseSkill(l)
     )
   );
 
-  const skillProficiency = required.map((skill) => {
+  const skillProficiency: SkillProficiencyEntry[] = required.map((skill) => {
     const inProfile = profileSkills.includes(skill);
     const inResume = resumeSkillList.includes(skill);
     const inManual = manualSkillList.includes(skill);
     const inGithub = githubLangs.has(skill);
 
-    // Evidence sources — each one adds a confidence point.
-    const evidence = [];
+    const evidence: string[] = [];
     if (inResume) evidence.push("resume");
     if (inProfile) evidence.push("profile");
     if (inGithub) evidence.push("github");
     if (inManual) evidence.push("completed");
 
-    let level, currentPct, gapPct;
+    let level: SkillProficiencyEntry["level"];
+    let currentPct: number;
+    let gapPct: number;
+
     if (evidence.length >= 3) {
       level = "Confident";
       currentPct = 95;
@@ -563,10 +761,6 @@ export async function runAnalysis({
       currentPct = 10;
       gapPct = 90;
     }
-
-    // Boost if the user has any project that lists this skill in its tech.
-    // (Read from AIAnalysis if available — handled at the controller layer
-    // since we don't have direct DB access here.)
 
     return {
       name: skill,

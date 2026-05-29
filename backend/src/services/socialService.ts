@@ -215,16 +215,19 @@ export function scoreGithub(profile: any, careerSkillKeys: any) {
   const followerScore = Math.min(15, profile.followers);
   const starScore = Math.min(20, profile.totalStars * 2);
 
-  const profileLangs = new Set(
-    profile.topLanguages.map((l: any) => l.name.toLowerCase())
-  );
-  const required = new Set(
-    (careerSkillKeys || []).map((s: any) => s.toLowerCase())
-  );
-  const matched = [...required].filter((s: any) =>
-    [...profileLangs].some((pl: any) => pl.includes(s) || s.includes(pl))
-  );
+ const profileLangs = new Set<string>(
+  profile.topLanguages.map((l: any) => String(l.name).toLowerCase())
+);
 
+const required = new Set<string>(
+  (careerSkillKeys || []).map((s: any) => String(s).toLowerCase())
+);
+
+const matched: string[] = [...required].filter((s: string) =>
+  [...profileLangs].some((pl: string) =>
+    pl.includes(s) || s.includes(pl)
+  )
+);
   const languageMatchScore = required.size
     ? Math.round((matched.length / required.size) * 25)
     : 0;
