@@ -336,90 +336,59 @@ function scoreProject({ project, repoContext, careerFit, aiAnalysis }: any) {
       (hasGitHubRepo ? 10 : 0)
   );
 
+  const roleLabel = careerFit || "your target role";
+  const breakdown: { reason: string; points: number }[] = [];
+
+  if (countMatches(signalText, innovationWords) > 0) {
+    breakdown.push({ reason: "AI keywords", points: 10 });
+  }
+
+  if (relevance >= 60) {
+    breakdown.push({ reason: `Relevant to ${roleLabel}`, points: 15 });
+  }
+
+  const strongStackHit = technologies >= 75 || techTokens.size >= 3 || languageCount >= 2;
+  if (strongStackHit) {
+    breakdown.push({ reason: "Strong technical stack", points: 15 });
+  }
+
+  const docsHit = readmeQualityScore(repoContext?.readme) >= 60;
+  if (docsHit) {
+    breakdown.push({ reason: "Well documented", points: 10 });
+  }
+
+  const complexHit = complexity >= 70;
+  if (complexHit) {
+    breakdown.push({ reason: "High project complexity", points: 20 });
+  }
+
+  if (completeness >= 70) {
+    breakdown.push({ reason: "Looks production-ready", points: 10 });
+  }
+
+  if (githubActivity >= 60 || (daysSinceUpdate != null && daysSinceUpdate <= 90)) {
+    breakdown.push({ reason: "Recently active on GitHub", points: 10 });
+  }
+
+  if (stars > 0) {
+    breakdown.push({ reason: "GitHub traction", points: 5 });
+  }
+
+  if ((hasDetails && hasTech) || (hasReadme && hasDetails)) {
+    breakdown.push({ reason: "Project completeness", points: 5 });
+  }
+
   const score = clampScore(
-    complexity * 0.25 +
-      technologies * 0.2 +
-      documentation * 0.15 +
-      innovation * 0.15 +
-      completeness * 0.1 +
-      githubActivity * 0.1 +
-      relevance * 0.05
+    breakdown.reduce((total, entry) => total + entry.points, 0)
   );
 
-  const reasons = buildReasons({
-    project,
-    repoContext,
-    careerFit,
-    complexity,
-    technologies,
-    documentation,
-    innovation,
-    completeness,
-    githubActivity,
-    relevance,
-    signalText,
-    techTokens,
-    languageCount,
-    stars,
-    daysSinceUpdate,
-  });
+  const reasons = breakdown.map((entry) => entry.reason);
 
   return {
     score,
     reasons,
-    breakdown: {
-      complexity,
-      technologies,
-      documentation,
-      innovation,
-      completeness,
-      githubActivity,
-      relevance,
-    },
+    breakdown,
   };
-}
-
-function buildReasons({
-  project,
-  repoContext,
-  careerFit,
-  complexity,
-  technologies,
-  documentation,
-  innovation,
-  completeness,
-  githubActivity,
-  relevance,
-  signalText,
-  techTokens,
-  languageCount,
-  stars,
-  daysSinceUpdate,
-}: any) {
-  const reasons: any[] = [];
-
-  const aiFeatureHit = /\b(ai|ml|machine learning|llm|rag|chatbot|assistant|automation|voice|personalized)\b/i.test(
-    signalText
-  );
-  const multiTechHit = techTokens.size >= 3 || languageCount >= 2;
-  const richDocsHit = documentation >= 70;
-  const productionReadyHit = completeness >= 70;
-  const strongStackHit = technologies >= 75 || multiTechHit;
-  const activeHit = githubActivity >= 60 || (daysSinceUpdate != null && daysSinceUpdate <= 90);
-  const relevantHit = relevance >= 60;
-  const complexHit = complexity >= 70;
-
-  if (aiFeatureHit) reasons.push("Uses AI features");
-  if (strongStackHit) reasons.push("Strong technical stack");
-  if (richDocsHit) reasons.push("Well documented");
-  if (complexHit) reasons.push("High project complexity");
-  if (productionReadyHit) reasons.push("Looks production-ready");
-  if (activeHit) reasons.push("Recently active on GitHub");
-  if (relevantHit) reasons.push(`Relevant to ${careerFit || "your target role"}`);
-  if (!aiFeatureHit && innovation >= 70) reasons.push("Interesting product idea");
-  if (!reasons.length && stars > 0) reasons.push("Has GitHub traction");
-
-  return Array.from(new Set(reasons)).slice(0, 3);
 }
 
 function buildStoredProjects(aiAnalysis: any, careerFit: any) {
@@ -448,6 +417,7 @@ function buildStoredProjects(aiAnalysis: any, careerFit: any) {
         ...project,
         score: scored.score,
         reasons: scored.reasons,
+        breakdown: scored.breakdown,
         source: "profile",
       };
     });
@@ -478,6 +448,7 @@ function buildStoredProjects(aiAnalysis: any, careerFit: any) {
           ...baseProject,
           score: scored.score,
           reasons: scored.reasons,
+          breakdown: scored.breakdown,
           source: "profile",
         };
       } catch {
@@ -546,6 +517,7 @@ async function buildGithubProjects(githubProfile: any, aiAnalysis: any, careerFi
         ...baseProject,
         score: scored.score,
         reasons: scored.reasons,
+        breakdown: scored.breakdown,
         source: "github",
       };
     })
@@ -591,6 +563,96 @@ function buildRecommendedProjects(aiAnalysis: any, careerFit: any, existingProje
       desc: template.desc(careerFit),
       tag: template.tag,
     }));
+}
+
+function parseStoredProject(raw: any) {
+  try {
+    const project = JSON.parse(raw);
+    return {
+      title: project.title || project.name || "Untitled project",
+      description: project.description || project.summary || "",
+      technologies: uniqueStrings(parseTechList(project.technologies || project.tags)),
+      status: project.status || "In Progress",
+      image: project.image || "/github.jpg",
+      url: project.url || project.repoUrl || null,
+      stars: project.stars || 0,
+      forks: project.forks || 0,
+      openIssues: project.openIssues || 0,
+      pushedAt: project.pushedAt || null,
+      size: project.size || 0,
+      homepage: project.homepage || null,
+      license: project.license || null,
+      topics: uniqueStrings(project.topics || []),
+      readme: project.readme || "",
+      source: project.source || "profile",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function collectStoredProjects(aiAnalysis: any) {
+  const projects: any[] = [];
+
+  const titles = aiAnalysis?.projectTitles || [];
+  const descriptions = aiAnalysis?.projectDescriptions || [];
+  const technologies = aiAnalysis?.projectTechnologies || [];
+  const statuses = aiAnalysis?.projectStatuses || [];
+  const images = aiAnalysis?.projectImages || [];
+
+  titles.forEach((title: any, index: number) => {
+    projects.push({
+      title,
+      description: descriptions[index] || "",
+      technologies: uniqueStrings(parseTechList(technologies[index])),
+      status: statuses[index] || "In Progress",
+      image: images[index] || "/github.jpg",
+      source: "profile",
+    });
+  });
+
+  (aiAnalysis?.savedProjects || [])
+    .map(parseStoredProject)
+    .filter(Boolean)
+    .forEach((project: any) => projects.push(project));
+
+  return projects;
+}
+
+function buildProjectMemoryPayload(projects: any[]) {
+  const completedProjects = projects.filter((project: any) => project.status === "Completed").length;
+  const inProgressProjects = projects.filter((project: any) => project.status === "In Progress").length;
+
+  return {
+    projectTitles: projects.map((project: any) => project.title),
+    projectDescriptions: projects.map((project: any) => project.description || ""),
+    projectTechnologies: projects.map((project: any) => uniqueStrings(project.technologies || []).join(", ")),
+    projectStatuses: projects.map((project: any) => project.status || "In Progress"),
+    projectImages: projects.map((project: any) => project.image || "/github.jpg"),
+    savedProjects: projects.map((project: any) =>
+      JSON.stringify({
+        title: project.title,
+        description: project.description || "",
+        technologies: uniqueStrings(project.technologies || []),
+        status: project.status || "In Progress",
+        image: project.image || "/github.jpg",
+        url: project.url || null,
+        stars: project.stars || 0,
+        forks: project.forks || 0,
+        openIssues: project.openIssues || 0,
+        pushedAt: project.pushedAt || null,
+        size: project.size || 0,
+        homepage: project.homepage || null,
+        license: project.license || null,
+        topics: uniqueStrings(project.topics || []),
+        readme: project.readme || "",
+        source: project.source || "profile",
+      })
+    ),
+    totalProjects: projects.length,
+    completedProjects,
+    inProgressProjects,
+  };
 }
 
 const ROLE_TEMPLATES: Record<string, any[]> = {
@@ -754,6 +816,66 @@ export const listProjects = async (req: any, res: any) => {
     });
   } catch (error: any) {
     console.error("listProjects error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const saveProjectMemory = async (req: any, res: any) => {
+  try {
+    const userId = req.user.id;
+    const title = String(req.body.title || "").trim();
+
+    if (!title) {
+      return res.status(400).json({ message: "Project title is required" });
+    }
+
+    const user: any = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { aiAnalysis: true },
+    });
+
+    if (!user?.aiAnalysis) {
+      return res.status(404).json({ message: "Project analysis not found. Run profile analysis first." });
+    }
+
+    const existingProjects = collectStoredProjects(user.aiAnalysis);
+    const nextProject = {
+      title,
+      description:
+        String(req.body.description || "").trim() ||
+        "Portfolio project added manually.",
+      technologies: uniqueStrings(parseTechList(req.body.technologies)),
+      status: ["Completed", "In Progress", "Planned"].includes(req.body.status)
+        ? req.body.status
+        : "In Progress",
+      image: String(req.body.image || "").trim() || "/github.jpg",
+      url: String(req.body.url || "").trim() || null,
+      source: "profile",
+    };
+
+    const projectMap = new Map<string, any>();
+
+    existingProjects.forEach((project: any) => {
+      const key = normalizeKey(project.title);
+      if (!key) return;
+      projectMap.set(key, project);
+    });
+
+    projectMap.set(normalizeKey(nextProject.title), nextProject);
+
+    const payload = buildProjectMemoryPayload(Array.from(projectMap.values()));
+
+    await prisma.aIAnalysis.update({
+      where: { userId },
+      data: payload,
+    });
+
+    res.status(200).json({
+      message: "Project memory saved successfully",
+      project: nextProject,
+    });
+  } catch (error: any) {
+    console.error("saveProjectMemory error:", error);
     res.status(500).json({ message: error.message });
   }
 };
