@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 
 import logout from "../utils/logout";
+import { apiUrl, assetUrl } from "../config/api";
 
 const SidebarLink = ({ href, icon: Icon, label, active }) => (
   <a
@@ -56,7 +57,7 @@ export default function Resume() {
     try {
       const token = localStorage.getItem("token");
       const { data } = await axios.get(
-        "http://localhost:5000/api/analysis",
+        apiUrl("/api/analysis"),
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setUserInfo(data.user);
@@ -88,7 +89,7 @@ export default function Resume() {
       form.append("resume", selectedFile);
 
       await axios.post(
-        "http://localhost:5000/api/profile/resume",
+        apiUrl("/api/profile/resume"),
         form,
         {
           headers: {
@@ -122,7 +123,7 @@ export default function Resume() {
   const resumeScore = resume?.score ?? 0;
   const atsScore = resume?.atsScore ?? 0;
   const resumeUrl = userInfo?.resume
-    ? `http://localhost:5000/${userInfo.resume}`
+    ? assetUrl(userInfo.resume)
     : null;
 
   const hasResume = Boolean(userInfo?.resume);

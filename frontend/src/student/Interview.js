@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { RetellWebClient } from "retell-client-js-sdk";
@@ -30,8 +30,9 @@ import {
 } from "lucide-react";
 
 import logout from "../utils/logout";
+import { API_BASE_URL } from "../config/api";
 
-const API = "http://localhost:5000";
+const API = API_BASE_URL;
 
 const SidebarLink = ({ href, icon: Icon, label, active }) => (
   <a
@@ -103,7 +104,7 @@ export default function Interview() {
     return { Authorization: `Bearer ${token}` };
   };
 
-  const fetchMeta = async () => {
+  const fetchMeta = useCallback(async () => {
     try {
       const { data } = await axios.get(`${API}/api/interviews`, {
         headers: authHeaders(),
@@ -115,7 +116,7 @@ export default function Interview() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchMeta();
@@ -123,7 +124,7 @@ export default function Interview() {
       if (callTimerRef.current) clearInterval(callTimerRef.current);
       retellRef.current?.stopCall?.();
     };
-  }, []);
+  }, [fetchMeta]);
 
   // -------------------- VOICE (Retell) plumbing ---------------------------
   const teardownRetell = () => {

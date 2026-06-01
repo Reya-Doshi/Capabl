@@ -18,6 +18,7 @@ backend/uploads/
 
 # AI / editor temp
 .claude/
+CODEBASE_WALKTHROUGH.md
 .vscode/
 .idea/
 

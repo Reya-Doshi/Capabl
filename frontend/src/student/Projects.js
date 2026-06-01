@@ -24,6 +24,7 @@ import {
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { apiUrl } from "../config/api";
 
 export default function Projects() {
 
@@ -64,7 +65,7 @@ export default function Projects() {
       const token = localStorage.getItem("token");
 
       const { data } = await axios.get(
-        "http://localhost:5000/api/projects",
+        apiUrl("/api/projects"),
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -128,7 +129,7 @@ export default function Projects() {
       const token = localStorage.getItem("token");
 
       await axios.post(
-        "http://localhost:5000/api/projects",
+        apiUrl("/api/projects"),
         {
           title: projectForm.title,
           description: projectForm.description,

@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 import logout from "../utils/logout";
+import { apiUrl, assetUrl } from "../config/api";
 
 const SidebarLink = ({ href, icon: Icon, label, active }) => (
   <a
@@ -58,7 +59,7 @@ export default function Dashboard() {
         }
 
         const { data } = await axios.get(
-          "http://localhost:5000/api/analysis",
+          apiUrl("/api/analysis"),
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
@@ -117,7 +118,7 @@ export default function Dashboard() {
   }
 
   const resumeUrl = userInfo.resume
-    ? `http://localhost:5000/${userInfo.resume}`
+    ? assetUrl(userInfo.resume)
     : null;
 
   return (

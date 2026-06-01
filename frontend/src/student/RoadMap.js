@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 
@@ -32,8 +32,9 @@ import {
 } from "lucide-react";
 
 import logout from "../utils/logout";
+import { API_BASE_URL } from "../config/api";
 
-const API = "http://localhost:5000";
+const API = API_BASE_URL;
 
 const SidebarLink = ({ href, icon: Icon, label, active }) => (
   <a
@@ -71,7 +72,7 @@ export default function RoadMap() {
     return { Authorization: `Bearer ${token}` };
   };
 
-  const fetchAnalysis = async ({ keepExpansion = true } = {}) => {
+  const fetchAnalysis = useCallback(async ({ keepExpansion = true } = {}) => {
     try {
       const { data } = await axios.get(`${API}/api/analysis`, {
         headers: authHeaders(),
@@ -85,11 +86,11 @@ export default function RoadMap() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchAnalysis({ keepExpansion: false });
-  }, []);
+  }, [fetchAnalysis]);
 
   // Sequential gating is enforced server-side; we still guard the click here
   // so locked-stage rows can't fire requests.

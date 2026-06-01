@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import logout from "../utils/logout";
+import { apiUrl } from "../config/api";
 
 import {
   LayoutDashboard,
@@ -91,7 +92,7 @@ export default function Analyzer() {
     try {
       const token = localStorage.getItem("token");
       const { data } = await axios.get(
-        "http://localhost:5000/api/analysis",
+        apiUrl("/api/analysis"),
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setUserInfo(data.user);
@@ -114,7 +115,7 @@ export default function Analyzer() {
       setReanalyzing(true);
       const token = localStorage.getItem("token");
       const { data } = await axios.post(
-        "http://localhost:5000/api/analysis",
+        apiUrl("/api/analysis"),
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );

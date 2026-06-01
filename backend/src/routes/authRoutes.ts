@@ -8,6 +8,7 @@ import {
 } from "../controllers/authController.js";
 
 const router = express.Router();
+const frontendUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
 
 // NORMAL AUTH
@@ -66,7 +67,11 @@ router.get(
       ) {
 
         return res.redirect(
-          `http://localhost:3000/google-success?token=${token}&type=dashboard&name=${req.user.name}&email=${req.user.email}`
+          `${frontendUrl}/google-success?token=${encodeURIComponent(
+            token
+          )}&type=dashboard&name=${encodeURIComponent(
+            req.user.name
+          )}&email=${encodeURIComponent(req.user.email)}`
         );
 
       }
@@ -74,7 +79,11 @@ router.get(
       // NEW USER / INCOMPLETE PROFILE
 
       return res.redirect(
-        `http://localhost:3000/google-success?token=${token}&type=onboarding&name=${req.user.name}&email=${req.user.email}`
+        `${frontendUrl}/google-success?token=${encodeURIComponent(
+          token
+        )}&type=onboarding&name=${encodeURIComponent(
+          req.user.name
+        )}&email=${encodeURIComponent(req.user.email)}`
       );
 
     } catch (error) {

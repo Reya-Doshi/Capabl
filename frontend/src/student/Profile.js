@@ -21,6 +21,7 @@ import {
 import { useEffect, useState } from "react";
 import axios from "axios";
 import logout from "../utils/logout";
+import { apiUrl, assetUrl } from "../config/api";
 
 export default function Profile() {
 
@@ -36,7 +37,7 @@ export default function Profile() {
         const token = localStorage.getItem("token");
 
         const { data } = await axios.get(
-          "http://localhost:5000/api/analysis",
+          apiUrl("/api/analysis"),
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -69,7 +70,7 @@ export default function Profile() {
     : [];
 
   const resumeUrl = userInfo?.resume
-    ? `http://localhost:5000/${userInfo.resume}`
+    ? assetUrl(userInfo.resume)
     : null;
 
   return (

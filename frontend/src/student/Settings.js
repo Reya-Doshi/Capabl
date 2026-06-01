@@ -15,6 +15,7 @@ import {
 import { useState } from "react";
 
 import axios from "axios";
+import { apiUrl } from "../config/api";
 
 export default function SettingsPage() {
 
@@ -44,7 +45,7 @@ export default function SettingsPage() {
       const token = localStorage.getItem("token");
 
       await axios.put(
-        "http://localhost:5000/api/users/change-password",
+        apiUrl("/api/users/change-password"),
 
         {
           currentPassword,
@@ -89,7 +90,7 @@ export default function SettingsPage() {
     const token = localStorage.getItem("token");
 
     await axios.delete(
-      "http://localhost:5000/api/users/delete-account",
+      apiUrl("/api/users/delete-account"),
       {
         headers: {
           Authorization: `Bearer ${token}`,

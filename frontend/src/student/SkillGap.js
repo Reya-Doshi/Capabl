@@ -24,8 +24,9 @@ import {
 } from "lucide-react";
 
 import logout from "../utils/logout";
+import { API_BASE_URL } from "../config/api";
 
-const API = "http://localhost:5000";
+const API = API_BASE_URL;
 
 const SidebarLink = ({ href, icon: Icon, label, active }) => (
   <a

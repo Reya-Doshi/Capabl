@@ -21,6 +21,7 @@ import {
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { apiUrl } from "../config/api";
 
 export default function Recommendations() {
 
@@ -52,7 +53,7 @@ export default function Recommendations() {
         const token = localStorage.getItem("token");
 
         const { data } = await axios.get(
-          "http://localhost:5000/api/recommendations",
+          apiUrl("/api/recommendations"),
           {
             headers: {
               Authorization: `Bearer ${token}`,

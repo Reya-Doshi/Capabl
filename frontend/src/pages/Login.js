@@ -10,6 +10,7 @@ import {
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useState } from "react";
+import { apiUrl } from "../config/api";
 export default function Login() {
   const [email, setEmail] = useState("");
 const [password, setPassword] = useState("");
@@ -20,7 +21,7 @@ const handleLogin = async (e) => {
   try {
 
     const { data } = await axios.post(
-      "http://localhost:5000/api/auth/login",
+      apiUrl("/api/auth/login"),
       {
         email,
         password,
@@ -235,7 +236,7 @@ const handleLogin = async (e) => {
             <div className="space-y-4">
 
               <a
-  href="http://localhost:5000/api/auth/google"
+  href={apiUrl("/api/auth/google")}
   className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-[#e8e6e1] font-semibold hover:bg-[#f7f5f2] transition-all"
 >
   <img

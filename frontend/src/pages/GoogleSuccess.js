@@ -61,7 +61,7 @@ export default function GoogleSuccess() {
 
     }
 
-  }, []);
+  }, [navigate, searchParams]);
 
   return (
 

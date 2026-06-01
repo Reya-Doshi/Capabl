@@ -14,6 +14,7 @@ import {
 
 import axios from "axios";
 import toast from "react-hot-toast";
+import { apiUrl } from "../config/api";
 
 export default function Signup() {
 
@@ -35,7 +36,7 @@ export default function Signup() {
       setLoading(true);
 
       const { data } = await axios.post(
-        "http://localhost:5000/api/auth/register",
+        apiUrl("/api/auth/register"),
         {
           name,
           email,

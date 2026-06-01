@@ -2,6 +2,7 @@ import { useState } from "react";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { apiUrl } from "../config/api";
 
 import {
   GraduationCap,
@@ -124,7 +125,7 @@ export default function Onboarding() {
       form.append("resume", resumeFile);
 
       const { data } = await axios.post(
-        "http://localhost:5000/api/profile",
+        apiUrl("/api/profile"),
         form,
         {
           headers: {
