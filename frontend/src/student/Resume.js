@@ -27,6 +27,7 @@ import {
   Link as LinkIcon,
   LogOut,
   Loader2,
+  Target,
 } from "lucide-react";
 
 import logout from "../utils/logout";
@@ -148,6 +149,7 @@ export default function Resume() {
           <SidebarLink href="/skill-gap" icon={FileSearch} label="Skill Gap" />
           <SidebarLink href="/resume" icon={FileText} label="Resume" active />
           <SidebarLink href="/interview" icon={Video} label="Mock Interview" />
+          <SidebarLink href="/job-match" icon={Target} label="Job Match" />
           <SidebarLink href="/projects" icon={FolderKanban} label="Projects" />
           <SidebarLink href="/recommendations" icon={Bookmark} label="Recommendations" />
           <SidebarLink href="/profile" icon={User} label="Profile" />

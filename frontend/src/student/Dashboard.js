@@ -138,6 +138,7 @@ export default function Dashboard() {
           <SidebarLink href="/skill-gap" icon={FileSearch} label="Skill Gap" />
           <SidebarLink href="/resume" icon={FileText} label="Resume" />
           <SidebarLink href="/interview" icon={Video} label="Mock Interview" />
+          <SidebarLink href="/job-match" icon={Target} label="Job Match" />
           <SidebarLink href="/projects" icon={FolderKanban} label="Projects" />
           <SidebarLink href="/recommendations" icon={Bookmark} label="Recommendations" />
           <SidebarLink href="/profile" icon={User} label="Profile" />
