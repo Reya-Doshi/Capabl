@@ -1,5 +1,5 @@
+import "dotenv/config";
 import express from "express";
-import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
 
@@ -10,8 +10,8 @@ import analysisRoutes from "./routes/analysisRoutes.js";
 import progressRoutes from "./routes/progressRoutes.js";
 import interviewRoutes from "./routes/interviewRoutes.js";
 import projectsRoutes from "./routes/projectsRoutes.js";
+import jobMatchRoutes from "./routes/jobMatchRoutes.js";
 import passport from "./config/passport.js";
-dotenv.config();
 
 const app = express();
 
@@ -41,6 +41,8 @@ app.use("/api/progress", progressRoutes);
 app.use("/api/interviews", interviewRoutes);
 
 app.use("/api/projects", projectsRoutes);
+
+app.use("/api/job-match", jobMatchRoutes);
 
 const PORT = process.env.PORT || 5000;
 

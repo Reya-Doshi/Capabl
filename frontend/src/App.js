@@ -17,6 +17,7 @@ import RoadMap from "./student/RoadMap";
 import SkillGap from "./student/SkillGap";
 import Resume from "./student/Resume";
 import Interview from "./student/Interview";
+import JobMatch from "./student/JobMatch";
 import Projects from "./student/Projects";
 import Recommendations from "./student/Recommendations";
 import Profile from "./student/Profile";
@@ -102,6 +103,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Interview />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/job-match"
+          element={
+            <ProtectedRoute>
+              <JobMatch />
             </ProtectedRoute>
           }
         />
