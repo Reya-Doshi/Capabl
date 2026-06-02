@@ -170,6 +170,14 @@ export default function Analyzer() {
           <span className="text-xl font-bold">Capabl</span>
         </a>
 
+        <button
+          onClick={logout}
+          className="flex items-center gap-3 px-4 py-3 rounded-2xl text-red-600 hover:bg-red-50 transition-all font-semibold mb-4"
+        >
+          <LogOut className="w-5 h-5" />
+          Logout
+        </button>
+
         <div className="space-y-2 flex-1">
           <SidebarLink href="/dashboard" icon={LayoutDashboard} label="Dashboard" />
           <SidebarLink href="/analyzer" icon={Brain} label="AI Analyzer" active />
@@ -183,14 +191,6 @@ export default function Analyzer() {
           <SidebarLink href="/profile" icon={User} label="Profile" />
           <SidebarLink href="/settings" icon={Settings} label="Settings" />
         </div>
-
-        <button
-          onClick={logout}
-          className="flex items-center gap-3 px-4 py-3 rounded-2xl text-red-600 hover:bg-red-50 transition-all font-semibold mt-4"
-        >
-          <LogOut className="w-5 h-5" />
-          Logout
-        </button>
       </aside>
 
       <main className="flex-1 lg:ml-[270px] p-8 lg:p-12">
