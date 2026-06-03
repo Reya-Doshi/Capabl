@@ -14,13 +14,18 @@ import {
   Settings,
   Bell,
   ChevronDown,
+  ChevronUp,
   CheckCircle2,
+  XCircle,
   TriangleAlert,
   Target,
   ArrowRight,
   Rocket,
   Star,
   Loader2,
+  Circle,
+  ExternalLink,
+  Info,
 } from "lucide-react";
 
 import logout from "../utils/logout";
@@ -42,26 +47,281 @@ const SidebarLink = ({ href, icon: Icon, label, active }) => (
   </a>
 );
 
-// Pick a colour band for the "gap %" badge based on how far the user is from
-// having the skill (gapPct = 100 means missing entirely, 0 means fully known).
-function gapTone(gapPct) {
-  if (gapPct >= 70) return { bar: "bg-red-400", chip: "bg-[#fff0ed] text-red-600" };
-  if (gapPct >= 40) return { bar: "bg-orange-400", chip: "bg-[#fff3df] text-[#c89a2b]" };
-  if (gapPct > 0) return { bar: "bg-yellow-400", chip: "bg-[#fff8e0] text-[#a47200]" };
-  return { bar: "bg-green-500", chip: "bg-[#e7f7ea] text-green-700" };
+// Readiness band → colour for the progress bar and level chip.
+function readinessTone(readiness) {
+  if (readiness >= 85) return { bar: "bg-green-500", chip: "bg-[#e7f7ea] text-green-700" };
+  if (readiness >= 70) return { bar: "bg-emerald-400", chip: "bg-[#e7f7ea] text-emerald-700" };
+  if (readiness >= 45) return { bar: "bg-[#c89a2b]", chip: "bg-[#fff3df] text-[#a47200]" };
+  if (readiness >= 20) return { bar: "bg-orange-400", chip: "bg-[#fff0ed] text-orange-600" };
+  return { bar: "bg-red-400", chip: "bg-[#fff0ed] text-red-600" };
 }
 
-const EVIDENCE_LABEL = {
-  resume: "from resume",
-  profile: "in profile",
-  github: "on GitHub",
-  completed: "marked done",
+function confidenceTone(confidence) {
+  if (confidence === "High") return "bg-[#e7f7ea] text-green-700";
+  if (confidence === "Medium") return "bg-[#fff3df] text-[#a47200]";
+  return "bg-[#fff0ed] text-red-600";
+}
+
+// The four weighted evidence sources, shown verbatim for traceability.
+const EVIDENCE_SOURCES = [
+  { key: "resume", label: "Resume", weight: "35%" },
+  { key: "project", label: "Projects", weight: "25%" },
+  { key: "github", label: "GitHub", weight: "20%" },
+  { key: "roadmap", label: "Roadmap", weight: "20%" },
+];
+
+// A skill card surfaces only learner-facing language and is expandable into a
+// full, evidence-by-evidence explanation of exactly how its readiness was
+// produced — nothing is hidden.
+const SkillCard = ({ skill }) => {
+  const [open, setOpen] = useState(false);
+  const tone = readinessTone(skill.readiness);
+  const found = skill.evidenceFound || [];
+  const missing = skill.evidenceMissing || [];
+  const missingConcepts = skill.missingConcepts || [];
+  const recommendations = skill.recommendations || [];
+  const scores = skill.evidenceScores || {};
+
+  return (
+    <div className="border border-[#ece8df] rounded-[1.5rem] p-5 bg-white hover:shadow-lg transition-all">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <h3 className="text-lg font-bold text-[#1d1d1f] capitalize">{skill.name}</h3>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${confidenceTone(skill.confidence)}`}>
+            {skill.confidence}
+          </span>
+          <span className={`px-3 py-1 rounded-full text-xs font-bold ${tone.chip}`}>
+            {skill.readiness}%
+          </span>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-6 mb-3">
+        <div>
+          <p className="text-xs text-slate-400 font-medium">Current</p>
+          <p className="text-sm font-semibold text-[#1d1d1f]">{skill.currentLevel}</p>
+        </div>
+        <ArrowRight className="w-4 h-4 text-slate-300" />
+        <div>
+          <p className="text-xs text-slate-400 font-medium">Target</p>
+          <p className="text-sm font-semibold text-[#1d1d1f]">{skill.targetLevel}</p>
+        </div>
+        {typeof skill.weight === "number" && (
+          <div className="ml-auto text-right">
+            <p className="text-xs text-slate-400 font-medium">Role weight</p>
+            <p className="text-sm font-semibold text-[#1d1d1f]">{Math.round(skill.weight)}%</p>
+          </div>
+        )}
+      </div>
+
+      <div className="w-full h-2 rounded-full bg-[#ececec] overflow-hidden mb-4">
+        <div
+          className={`h-full rounded-full ${tone.bar} transition-all duration-1000 ease-out`}
+          style={{ width: `${skill.readiness}%` }}
+        />
+      </div>
+
+      {/* Evidence found / missing — traceable, with checks and crosses */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {found.map((ev) => (
+          <span
+            key={`f-${ev}`}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#f5f1ea] text-[#1d1d1f] text-xs font-semibold"
+          >
+            <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+            {ev}
+          </span>
+        ))}
+        {missing.map((ev) => (
+          <span
+            key={`m-${ev}`}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#faf8f4] text-slate-400 text-xs font-semibold"
+          >
+            <XCircle className="w-3.5 h-3.5 text-slate-300" />
+            {ev}
+          </span>
+        ))}
+      </div>
+
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#c89a2b] hover:underline"
+      >
+        {open ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        {open ? "Hide details" : "Why this score?"}
+      </button>
+
+      {open && (
+        <div className="mt-4 pt-4 border-t border-[#f2f2f2] space-y-4">
+          {/* Reason — generated from actual evidence */}
+          <p className="text-sm text-slate-600 leading-6">{skill.reason}</p>
+
+          {/* Evidence traceability — the four sources and their raw 0-100 scores */}
+          <div>
+            <p className="text-xs font-semibold text-slate-500 mb-2">
+              Evidence scores (weighted into readiness)
+            </p>
+            <div className="space-y-2">
+              {EVIDENCE_SOURCES.map((src) => {
+                const value = scores[src.key] ?? 0;
+                return (
+                  <div key={src.key} className="flex items-center gap-3">
+                    <span className="w-20 text-xs text-slate-500 shrink-0">
+                      {src.label}
+                    </span>
+                    <div className="flex-1 h-1.5 rounded-full bg-[#ececec] overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${value > 0 ? "bg-[#1d1d1f]" : "bg-transparent"}`}
+                        style={{ width: `${value}%` }}
+                      />
+                    </div>
+                    <span className="w-14 text-right text-xs font-semibold text-[#1d1d1f]">
+                      {value} <span className="text-slate-400 font-normal">×{src.weight}</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            {skill.profileBaselineApplied && (
+              <p className="text-xs text-slate-400 mt-2 flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5" />
+                Self-reported in profile — readiness floored at a baseline until
+                verified by other evidence.
+              </p>
+            )}
+          </div>
+
+          {missingConcepts.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-slate-500 mb-2">
+                Missing concepts
+              </p>
+              <ul className="space-y-1">
+                {missingConcepts.map((concept) => (
+                  <li
+                    key={concept}
+                    className="flex items-center gap-2 text-sm text-slate-600 capitalize"
+                  >
+                    <Circle className="w-1.5 h-1.5 fill-[#c89a2b] text-[#c89a2b]" />
+                    {concept}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {recommendations.length > 0 && skill.readiness < 85 && (
+            <div>
+              <p className="text-xs font-semibold text-slate-500 mb-2">Learn it</p>
+              <div className="flex flex-col gap-1.5">
+                {recommendations.map((rec) => (
+                  <a
+                    key={rec.url}
+                    href={rec.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-2 text-sm text-blue-600 hover:underline"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{rec.title}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// A leader-dot row used throughout the "Why this score?" panel.
+const LeaderRow = ({ label, value, positive }) => (
+  <div className="flex items-baseline gap-2">
+    <span className="capitalize text-slate-600 truncate">{label}</span>
+    <span className="flex-1 border-b border-dotted border-slate-300 translate-y-[-3px]" />
+    <span
+      className={`font-semibold tabular-nums ${
+        positive === false ? "text-red-500" : "text-green-600"
+      }`}
+    >
+      {positive === false ? "−" : "+"}
+      {Math.abs(value)}
+    </span>
+  </div>
+);
+
+// The full, auditable breakdown of the overall match score.
+const WhyScorePanel = ({ explanation, matchScore }) => {
+  if (!explanation) return null;
+  const contributions = explanation.contributions || [];
+  const gaps = explanation.largestGaps || [];
+  const ev = explanation.evidenceSummary || {};
+
+  return (
+    <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 sm:p-7 shadow-sm mb-8">
+      <div className="flex items-center gap-3 mb-1">
+        <Info className="w-5 h-5 text-[#c89a2b]" />
+        <h2 className="text-2xl font-bold text-[#1d1d1f]">
+          Why {matchScore}%?
+        </h2>
+      </div>
+      <p className="text-slate-500 mb-6">{explanation.formula}</p>
+
+      <div className="grid md:grid-cols-3 gap-6">
+        <div>
+          <h3 className="text-sm font-bold text-[#1d1d1f] mb-3">
+            Skill contributions
+          </h3>
+          <div className="space-y-2 text-sm">
+            {contributions.map((c) => (
+              <LeaderRow key={c.name} label={c.name} value={c.points} positive />
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-bold text-[#1d1d1f] mb-3">Largest gaps</h3>
+          <div className="space-y-2 text-sm">
+            {gaps.length === 0 ? (
+              <p className="text-slate-400">No gaps — every skill is covered.</p>
+            ) : (
+              gaps.map((g) => (
+                <LeaderRow key={g.name} label={g.name} value={g.lostPoints} positive={false} />
+              ))
+            )}
+          </div>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-bold text-[#1d1d1f] mb-3">
+            Evidence summary
+          </h3>
+          <div className="space-y-2 text-sm">
+            <LeaderRow label="Resume evidence" value={ev.resume ?? 0} positive />
+            <LeaderRow label="Project evidence" value={ev.project ?? 0} positive />
+            <LeaderRow label="GitHub evidence" value={ev.github ?? 0} positive />
+            <LeaderRow label="Roadmap progress" value={ev.roadmap ?? 0} positive />
+            {(ev.profile ?? 0) > 0 && (
+              <LeaderRow label="Profile (self-reported)" value={ev.profile} positive />
+            )}
+            <div className="flex items-baseline gap-2 pt-2 mt-2 border-t border-[#f2f2f2]">
+              <span className="font-bold text-[#1d1d1f]">Final weighted score</span>
+              <span className="flex-1" />
+              <span className="font-bold text-[#1d1d1f] tabular-nums">{matchScore}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default function SkillGap() {
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const [showWhy, setShowWhy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -81,17 +341,13 @@ export default function SkillGap() {
     })();
   }, []);
 
-  // Per-skill rows now come straight from the backend's `skillProficiency`
-  // array — it derives `level`, `currentPct`, and `gapPct` from REAL evidence
-  // sources (resume parse, profile skills, GitHub languages, manually-marked
-  // roadmap completions) instead of synthetic stage-index math.
-  const rows = useMemo(() => {
-    if (!analysis) return [];
-    return (analysis.skillProficiency || []).map((s) => ({
-      ...s,
-      required: "Advanced",
-    }));
-  }, [analysis]);
+  // Per-skill cards come straight from the backend's `skillProficiency` array —
+  // every number is mathematically derived from real evidence (resume parse,
+  // projects, GitHub, roadmap completion), never synthetic.
+  const skills = useMemo(
+    () => (analysis ? analysis.skillProficiency || [] : []),
+    [analysis]
+  );
 
   if (loading) {
     return (
@@ -117,7 +373,7 @@ export default function SkillGap() {
           subtitle: `Recommended for ${analysis?.careerFit}`,
         }));
 
-  // Donut numbers come from the (already sequentially-gated) roadmap stages.
+  // Learning-path donut numbers come from the (sequentially-gated) roadmap.
   const stages = analysis?.roadmapStages || [];
   const allSkills = stages.flatMap((s) => s.skills || []);
   const completed = allSkills.filter((s) => s.known).length;
@@ -147,7 +403,6 @@ export default function SkillGap() {
           <SidebarLink href="/skill-gap" icon={FileSearch} label="Skill Gap" active />
           <SidebarLink href="/resume" icon={FileText} label="Resume" />
           <SidebarLink href="/interview" icon={Video} label="Mock Interview" />
-          <SidebarLink href="/job-match" icon={Target} label="Job Match" />
           <SidebarLink href="/projects" icon={FolderKanban} label="Projects" />
           <SidebarLink href="/recommendations" icon={Bookmark} label="Recommendations" />
           <SidebarLink href="/profile" icon={User} label="Profile" />
@@ -162,8 +417,8 @@ export default function SkillGap() {
               Skill Gap
             </h1>
             <p className="text-slate-500 text-base sm:text-lg font-medium">
-              Identify your skill gaps and bridge them with personalized
-              recommendations.
+              How ready you are for {analysis?.careerFit || "your target role"},
+              skill by skill — with the math behind every score.
             </p>
           </div>
 
@@ -185,16 +440,28 @@ export default function SkillGap() {
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 hover:-translate-y-1 hover:shadow-xl transition-all">
-            <div className="w-12 h-12 rounded-2xl bg-[#f5edff] flex items-center justify-center mb-5">
-              <FileSearch className="w-5 h-5 text-purple-500" />
+          {/* Overall Match Score — clickable to reveal the full breakdown */}
+          <button
+            onClick={() => setShowWhy((v) => !v)}
+            className="text-left bg-white border border-[#e8e6e1] rounded-[2rem] p-6 hover:-translate-y-1 hover:shadow-xl transition-all focus:outline-none focus:ring-2 focus:ring-[#c89a2b]/30"
+          >
+            <div className="flex items-center justify-between mb-5">
+              <div className="w-12 h-12 rounded-2xl bg-[#f5edff] flex items-center justify-center">
+                <FileSearch className="w-5 h-5 text-purple-500" />
+              </div>
+              <span className="inline-flex items-center gap-1 text-xs font-semibold text-[#c89a2b]">
+                {showWhy ? "Hide" : "Why?"}
+                {showWhy ? (
+                  <ChevronUp className="w-3.5 h-3.5" />
+                ) : (
+                  <ChevronDown className="w-3.5 h-3.5" />
+                )}
+              </span>
             </div>
             <h3 className="text-sm font-medium text-slate-500 mb-2">
               Overall Match Score
             </h3>
-            <h2 className="text-4xl font-bold text-purple-500 mb-4">
-              {matchScore}%
-            </h2>
+            <h2 className="text-4xl font-bold text-purple-500 mb-4">{matchScore}%</h2>
             <div className="w-full h-2 rounded-full bg-[#ececec] overflow-hidden mb-3">
               <div
                 className="h-full bg-purple-500 rounded-full transition-all duration-1000 ease-out"
@@ -202,24 +469,16 @@ export default function SkillGap() {
               ></div>
             </div>
             <p className="text-sm text-slate-500">
-              {matchScore >= 75
-                ? "Excellent"
-                : matchScore >= 50
-                ? "Good"
-                : matchScore >= 25
-                ? "Needs work"
-                : "Just getting started"}
+              Weighted average of every skill — tap to see how.
             </p>
-          </div>
+          </button>
 
           <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 hover:-translate-y-1 hover:shadow-xl transition-all">
             <CheckCircle2 className="w-10 h-10 text-green-500 mb-5" />
             <h3 className="text-sm font-medium text-slate-500 mb-2">
               Skills You Have
             </h3>
-            <h2 className="text-4xl font-bold text-[#1d1d1f] mb-4">
-              {haveCount}
-            </h2>
+            <h2 className="text-4xl font-bold text-[#1d1d1f] mb-4">{haveCount}</h2>
             <div className="w-full h-2 rounded-full bg-[#ececec] overflow-hidden mb-3">
               <div
                 className="h-full bg-green-500 rounded-full transition-all duration-1000 ease-out"
@@ -231,9 +490,7 @@ export default function SkillGap() {
               ></div>
             </div>
             <p className="text-sm text-green-600 font-medium">
-              {totalRequired
-                ? `${haveCount} of ${totalRequired} required`
-                : "—"}
+              {totalRequired ? `${haveCount} of ${totalRequired} required` : "—"}
             </p>
           </div>
 
@@ -242,9 +499,7 @@ export default function SkillGap() {
             <h3 className="text-sm font-medium text-slate-500 mb-2">
               Skills Missing
             </h3>
-            <h2 className="text-4xl font-bold text-[#1d1d1f] mb-4">
-              {missingCount}
-            </h2>
+            <h2 className="text-4xl font-bold text-[#1d1d1f] mb-4">{missingCount}</h2>
             <div className="w-full h-2 rounded-full bg-[#ececec] overflow-hidden mb-3">
               <div
                 className="h-full bg-orange-400 rounded-full transition-all duration-1000 ease-out"
@@ -273,9 +528,7 @@ export default function SkillGap() {
                 className="h-full bg-blue-500 rounded-full transition-all duration-1000 ease-out"
                 style={{
                   width: missingCount
-                    ? `${Math.round(
-                        (priorityGaps.length / missingCount) * 100
-                      )}%`
+                    ? `${Math.round((priorityGaps.length / missingCount) * 100)}%`
                     : "0%",
                 }}
               ></div>
@@ -284,94 +537,37 @@ export default function SkillGap() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-[1.5fr,1fr] gap-6 mb-8">
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 shadow-sm">
-            <h2 className="text-2xl font-bold text-[#1d1d1f] mb-6">
-              Skill Gap Breakdown
-            </h2>
+        {showWhy && (
+          <WhyScorePanel
+            explanation={analysis?.scoreExplanation}
+            matchScore={matchScore}
+          />
+        )}
 
-            {rows.length === 0 ? (
-              <p className="text-slate-400 text-sm">
-                No required skills detected — set your career goal in your
-                profile.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {rows.map((skill) => {
-                  const tone = gapTone(skill.gapPct);
-                  return (
-                    <div
-                      key={skill.name}
-                      className="grid grid-cols-1 sm:grid-cols-[1.2fr_1fr_1fr_auto] items-center gap-4 sm:gap-5 border-b border-[#f2f2f2] pb-4 rounded-2xl px-3 py-3 hover:bg-[#faf8f4] transition-all"
-                    >
-                      <div>
-                        <h3 className="font-medium text-[#1d1d1f] capitalize mb-1">
-                          {skill.name}
-                        </h3>
-                        {skill.evidence && skill.evidence.length > 0 ? (
-                          <div className="flex flex-wrap gap-1">
-                            {skill.evidence.map((ev) => (
-                              <span
-                                key={ev}
-                                className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#f4efff] text-purple-700 font-semibold"
-                              >
-                                {EVIDENCE_LABEL[ev] || ev}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#fff0ed] text-red-600 font-semibold">
-                            no evidence yet
-                          </span>
-                        )}
-                      </div>
+        <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 sm:p-7 shadow-sm mb-8">
+          <h2 className="text-2xl font-bold text-[#1d1d1f] mb-1">
+            Skill Readiness
+          </h2>
+          <p className="text-slate-500 mb-6">
+            Each readiness = 0.35·resume + 0.25·projects + 0.20·GitHub +
+            0.20·roadmap. Tap a card to see the evidence behind it.
+          </p>
 
-                      <div>
-                        <p className="text-sm text-slate-500 mb-2">
-                          {skill.level}
-                        </p>
-                        <div className="w-full h-2 rounded-full bg-[#ececec] overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${tone.bar} transition-all duration-1000`}
-                            style={{ width: `${skill.currentPct}%` }}
-                          ></div>
-                        </div>
-                      </div>
+          {skills.length === 0 ? (
+            <p className="text-slate-400 text-sm">
+              No required skills detected — set your career goal in your profile,
+              then re-run the analyzer.
+            </p>
+          ) : (
+            <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              {skills.map((skill) => (
+                <SkillCard key={skill.name} skill={skill} />
+              ))}
+            </div>
+          )}
+        </div>
 
-                      <div>
-                        <p className="text-sm text-slate-500 mb-2">
-                          {skill.required}
-                        </p>
-                        <div className="w-full h-2 rounded-full bg-[#ececec] overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-green-500 transition-all duration-1000"
-                            style={{ width: `${skill.targetPct}%` }}
-                          ></div>
-                        </div>
-                      </div>
-
-                      <div className="flex sm:justify-end">
-                        <div
-                          className={`px-4 py-2 rounded-full text-sm font-semibold ${tone.chip}`}
-                        >
-                          {skill.gapPct === 0 ? "Done" : `${skill.gapPct}%`}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            <a
-              href="/road-map"
-              className="w-full h-12 border border-[#e8e6e1] rounded-xl mt-7 flex items-center justify-center gap-2 font-semibold hover:bg-[#f5f1ea] transition-all"
-            >
-              View Full Skill Gap Analysis
-              <ArrowRight className="w-4 h-4" />
-            </a>
-          </div>
-
+        <div className="grid lg:grid-cols-[1fr,1fr] gap-6 mb-8">
           <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 shadow-sm">
             <h2 className="text-2xl font-bold text-[#1d1d1f] mb-6">
               Top Priority Gaps
@@ -413,13 +609,11 @@ export default function SkillGap() {
               href="/road-map"
               className="w-full h-12 border border-[#e8e6e1] rounded-xl mt-7 flex items-center justify-center gap-2 font-semibold hover:bg-[#f5f1ea] transition-all"
             >
-              View All Gaps
+              View Learning Roadmap
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>
-        </div>
 
-        <div className="grid lg:grid-cols-2 gap-6 mb-8">
           <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-6">
               <Star className="w-5 h-5 text-[#c89a2b]" />
@@ -467,13 +661,15 @@ export default function SkillGap() {
               <ArrowRight className="w-4 h-4" />
             </a>
           </div>
+        </div>
 
-          <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 shadow-sm">
-            <h2 className="text-2xl font-bold text-[#1d1d1f] mb-6">
-              Learning Path Progress
-            </h2>
+        <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 shadow-sm mb-8">
+          <h2 className="text-2xl font-bold text-[#1d1d1f] mb-6">
+            Learning Path Progress
+          </h2>
 
-            <div className="flex items-center justify-center mb-8">
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            <div className="flex items-center justify-center">
               <div
                 className="w-52 h-52 rounded-full flex items-center justify-center"
                 style={{
@@ -495,23 +691,19 @@ export default function SkillGap() {
                     <h2 className="text-5xl font-bold text-[#1d1d1f]">
                       {overallProgress}%
                     </h2>
-                    <p className="text-sm text-slate-500 mt-2">
-                      Overall Progress
-                    </p>
+                    <p className="text-sm text-slate-500 mt-2">Overall Progress</p>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3 mb-7">
+            <div className="flex-1 w-full space-y-3">
               <div className="flex items-center justify-between hover:bg-[#faf8f4] rounded-xl px-3 py-2 transition-all">
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
                   <p className="text-sm text-slate-500">Completed</p>
                 </div>
-                <p className="font-semibold text-[#1d1d1f]">
-                  {completed} Skills
-                </p>
+                <p className="font-semibold text-[#1d1d1f]">{completed} Skills</p>
               </div>
 
               <div className="flex items-center justify-between hover:bg-[#faf8f4] rounded-xl px-3 py-2 transition-all">
@@ -519,9 +711,7 @@ export default function SkillGap() {
                   <div className="w-3 h-3 rounded-full bg-orange-400"></div>
                   <p className="text-sm text-slate-500">In Progress</p>
                 </div>
-                <p className="font-semibold text-[#1d1d1f]">
-                  {inProgress} Skills
-                </p>
+                <p className="font-semibold text-[#1d1d1f]">{inProgress} Skills</p>
               </div>
 
               <div className="flex items-center justify-between hover:bg-[#faf8f4] rounded-xl px-3 py-2 transition-all">
@@ -529,19 +719,9 @@ export default function SkillGap() {
                   <div className="w-3 h-3 rounded-full bg-red-400"></div>
                   <p className="text-sm text-slate-500">Yet to Start</p>
                 </div>
-                <p className="font-semibold text-[#1d1d1f]">
-                  {yetToStart} Skills
-                </p>
+                <p className="font-semibold text-[#1d1d1f]">{yetToStart} Skills</p>
               </div>
             </div>
-
-            <a
-              href="/road-map"
-              className="w-full h-12 border border-[#e8e6e1] rounded-xl flex items-center justify-center gap-2 font-semibold hover:bg-[#f5f1ea] transition-all"
-            >
-              View Full Roadmap
-              <ArrowRight className="w-4 h-4" />
-            </a>
           </div>
         </div>
 

@@ -24,7 +24,6 @@ import {
   RotateCw,
   Loader2,
   LogOut,
-  Target,
 } from "lucide-react";
 
 const GithubIcon = (props) => (
@@ -159,6 +158,15 @@ export default function Analyzer() {
 
   const ghProfile = analysis?.github?.profile;
   const liData = analysis?.linkedin;
+  const semanticScore = analysis?.semanticScore ?? 0;
+  const semanticBand =
+    semanticScore >= 75
+      ? "Strong alignment"
+      : semanticScore >= 50
+      ? "Good alignment"
+      : semanticScore >= 30
+      ? "Partial alignment"
+      : "Low alignment";
 
   return (
     <div className="min-h-screen bg-[#f7f5f2] flex">
@@ -185,7 +193,6 @@ export default function Analyzer() {
           <SidebarLink href="/skill-gap" icon={FileSearch} label="Skill Gap" />
           <SidebarLink href="/resume" icon={FileText} label="Resume" />
           <SidebarLink href="/interview" icon={Video} label="Mock Interview" />
-          <SidebarLink href="/job-match" icon={Target} label="Job Match" />
           <SidebarLink href="/projects" icon={FolderKanban} label="Projects" />
           <SidebarLink href="/recommendations" icon={Bookmark} label="Recommendations" />
           <SidebarLink href="/profile" icon={User} label="Profile" />
@@ -223,12 +230,17 @@ export default function Analyzer() {
               Target: {analysis?.careerFit || "Set your career goal"}
             </h2>
             <p className="text-slate-600 max-w-xl">
-              Analysis combines resume keyword/ATS scoring, GitHub public API
-              data, and LinkedIn URL validation.
+              Analysis combines resume keyword/ATS scoring, semantic alignment to
+              the role profile, GitHub public API data, and LinkedIn URL
+              validation.
             </p>
           </div>
-          <div className="hidden lg:flex w-[220px] h-[130px] rounded-[2rem] bg-white/70 items-center justify-center">
-            <Brain className="w-16 h-16 text-[#c4a05d] animate-pulse" />
+          <div className="hidden lg:flex flex-col items-center justify-center w-[220px] h-[130px] rounded-[2rem] bg-white/70 px-4">
+            <p className="text-xs font-semibold text-slate-500 mb-1 text-center">
+              Semantic Alignment
+            </p>
+            <h3 className="text-4xl font-bold text-[#c4a05d]">{semanticScore}%</h3>
+            <p className="text-xs text-slate-500 mt-1">{semanticBand}</p>
           </div>
         </div>
 
