@@ -192,9 +192,10 @@ export async function buildCandidateContext(userId: any) {
           repos: analysis.github.profile?.ownRepoCount ?? null,
           stars: analysis.github.profile?.totalStars ?? null,
           languages: analysis.github.languagesMatched || [],
-          topLanguages: Object.keys(
-            analysis.github.profile?.languageBytes || {}
-          ).slice(0, 5),
+          topLanguages: (analysis.github.profile?.topLanguages || [])
+            .map((l: any) => l?.name)
+            .filter(Boolean)
+            .slice(0, 5),
         }
       : null,
 

@@ -171,6 +171,62 @@ const SKILL_RESOURCES: Record<string, any[]> = {
   ],
 };
 
+// Key sub-concepts that define "advanced" command of a skill. Used to surface
+// concrete "missing concepts" on a skill card when a learner has only partial
+// evidence for a skill. Kept short (3-4 per skill) so cards stay scannable.
+const SKILL_CONCEPTS: Record<string, string[]> = {
+  javascript: ["closures & scope", "async/await", "ES modules", "the event loop"],
+  typescript: ["generics", "utility types", "discriminated unions", "strict config"],
+  react: ["state management", "hooks & effects", "performance/memoization", "testing"],
+  "next.js": ["server components", "data fetching", "routing", "deployment"],
+  redux: ["store design", "middleware", "selectors", "RTK Query"],
+  tailwind: ["utility composition", "responsive variants", "theming", "dark mode"],
+  "tailwind css": ["utility composition", "responsive variants", "theming", "dark mode"],
+  "responsive design": ["flexbox", "grid", "media queries", "mobile-first layout"],
+  html: ["semantic markup", "forms & validation", "accessibility", "SEO basics"],
+  css: ["flexbox", "grid", "animations", "specificity & cascade"],
+  "node.js": ["event loop", "streams", "error handling", "package management"],
+  node: ["event loop", "streams", "error handling", "package management"],
+  express: ["middleware", "routing", "error handling", "validation"],
+  "rest api": ["resource modeling", "status codes", "pagination", "versioning"],
+  authentication: ["JWT", "OAuth flows", "sessions", "password hashing"],
+  mongodb: ["schema design", "aggregation pipeline", "indexing", "transactions"],
+  postgresql: ["joins", "indexing", "transactions", "query optimization"],
+  redis: ["caching patterns", "pub/sub", "expiry/TTL", "data structures"],
+  sql: ["joins", "aggregations", "subqueries", "indexing"],
+  docker: ["images vs containers", "Dockerfile", "volumes & networks", "compose"],
+  kubernetes: ["pods & deployments", "services", "config & secrets", "scaling"],
+  aws: ["IAM", "EC2/S3", "networking (VPC)", "managed databases"],
+  "ci/cd": ["pipelines", "automated testing", "build artifacts", "deployment gates"],
+  terraform: ["providers", "state management", "modules", "plan/apply workflow"],
+  linux: ["file permissions", "process management", "shell scripting", "networking"],
+  python: ["data structures", "OOP", "virtual environments", "error handling"],
+  numpy: ["ndarrays", "broadcasting", "vectorization", "linear algebra ops"],
+  pandas: ["dataframes", "groupby", "merging/joining", "missing data handling"],
+  "machine learning": ["supervised vs unsupervised", "feature engineering", "model evaluation", "overfitting"],
+  "deep learning": ["neural networks", "backpropagation", "CNNs/RNNs", "regularization"],
+  tensorflow: ["tensors", "keras API", "training loops", "model export"],
+  pytorch: ["tensors & autograd", "nn.Module", "training loops", "data loaders"],
+  "llm integration": ["API calls", "context windows", "streaming", "rate limiting"],
+  "prompt engineering": ["few-shot prompting", "system prompts", "output formatting", "evaluation"],
+  "openai api": ["chat completions", "function calling", "embeddings", "token limits"],
+  websockets: ["connection lifecycle", "rooms/channels", "reconnection", "scaling"],
+  git: ["branching & merging", "rebasing", "resolving conflicts", "pull requests"],
+  "system design": ["scalability", "caching", "load balancing", "database choices"],
+  "state management": ["local vs global state", "context", "reducers", "data caching"],
+  testing: ["unit tests", "integration tests", "mocking", "test coverage"],
+  flutter: ["widgets", "state management", "navigation", "platform channels"],
+  "react native": ["components", "navigation", "native modules", "performance"],
+};
+
+export function conceptsForSkill(skill: any): string[] {
+  if (!skill) return [];
+  const key = String(skill).toLowerCase().trim();
+  if (SKILL_CONCEPTS[key]) return SKILL_CONCEPTS[key];
+  // Generic, still-useful concepts when a skill isn't curated.
+  return ["core fundamentals", "hands-on project experience", "best practices"];
+}
+
 export function resourcesForSkill(skill: any) {
   if (!skill) return [];
   const key = String(skill).toLowerCase().trim();

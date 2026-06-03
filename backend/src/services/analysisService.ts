@@ -7,7 +7,11 @@ import {
   scoreGithub,
   scoreLinkedIn,
 } from "./socialService.js";
-import { resourcesForSkill } from "./skillResources.js";
+import { resourcesForSkill, conceptsForSkill } from "./skillResources.js";
+import {
+  computeSemanticAlignment,
+  buildRoleProfileText,
+} from "./semanticMatchService.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
@@ -80,7 +84,7 @@ interface GithubProfile {
   reason?: string;
   ownRepoCount?: number;
   totalStars?: number;
-  languageBytes?: Record<string, number>;
+  topLanguages?: { name: string; count: number }[];
 }
 
 interface GithubScoreResult {
@@ -107,14 +111,76 @@ interface SuggestionEntry {
   description: string;
 }
 
+type ProficiencyLevel =
+  | "Not started"
+  | "Beginner"
+  | "Practicing"
+  | "Proficient"
+  | "Advanced";
+
+type ConfidenceLevel = "Low" | "Medium" | "High";
+
+interface SkillRecommendation {
+  title: string;
+  url: string;
+  type: string;
+}
+
+// The four weighted evidence sources (each 0-100). These feed the readiness
+// formula directly and are surfaced verbatim so every score is auditable.
+interface EvidenceScores {
+  resume: number;
+  project: number;
+  github: number;
+  roadmap: number;
+}
+
 interface SkillProficiencyEntry {
   name: string;
-  level: "Confident" | "Practising" | "Beginner";
-  currentPct: number;
-  targetPct: number;
-  gapPct: number;
-  evidence: string[];
+  weight: number; // role-importance weight, as a percentage (sums to ~100)
+  readiness: number; // 0-100, mathematically derived from evidence
+  contribution: number; // points this skill adds to the overall score
+  lostPoints: number; // points this skill costs the overall score (the gap)
+  currentLevel: ProficiencyLevel;
+  targetLevel: ProficiencyLevel;
+  confidence: ConfidenceLevel;
+  evidenceScores: EvidenceScores; // raw 0-100 per source
+  evidenceFound: string[]; // e.g. ["Resume", "Projects", "GitHub"]
+  evidenceMissing: string[]; // e.g. ["Roadmap"]
+  profileBaselineApplied: boolean; // readiness floored by a self-reported skill
+  missingConcepts: string[];
+  recommendations: SkillRecommendation[];
+  reason: string; // explanation generated from the actual evidence found
   known: boolean;
+}
+
+interface SkillContribution {
+  name: string;
+  weight: number;
+  readiness: number;
+  points: number; // weight% × readiness (rounded) — sums to the overall score
+}
+
+interface SkillGapContribution {
+  name: string;
+  weight: number;
+  readiness: number;
+  lostPoints: number; // weight% × (100 − readiness) — sums to (100 − overall)
+}
+
+// The fully auditable breakdown behind the overall match score.
+interface ScoreExplanation {
+  overall: number;
+  formula: string;
+  contributions: SkillContribution[]; // every skill, sorted by points desc
+  largestGaps: SkillGapContribution[]; // every gap, sorted by lostPoints desc
+  evidenceSummary: {
+    resume: number;
+    project: number;
+    github: number;
+    roadmap: number;
+    profile: number; // self-reported baseline portion
+  };
 }
 
 // What Gemini returns for role intelligence
@@ -125,6 +191,18 @@ interface RoleIntelligence {
     title: string;                 // stage name e.g. "Foundations"
     skills: string[];              // 3-4 skills in this stage
   }[];
+  // Importance weight per skill (integers, roughly summing to 100). Optional:
+  // older cached payloads won't have it, so the engine derives equal weights
+  // as a fallback. The weights are an *input* the user can see — the overall
+  // score is computed by our own formula, never returned by Gemini.
+  skillWeights?: Record<string, number>;
+}
+
+// A project the user has built, used as an independent evidence source.
+interface ProjectEvidence {
+  title?: string;
+  description?: string;
+  technologies?: string[];
 }
 
 interface CachedRoleIntelligence {
@@ -150,6 +228,7 @@ interface RunAnalysisInput {
   manualSkills?: string[];
   weeklyProgress?: WeeklyDoneEntry[];
   resumeText?: string; // optional pre-extracted text (avoids double extraction)
+  projects?: ProjectEvidence[]; // user's projects, used as evidence
   cachedRoleIntelligence?: CachedRoleIntelligence;
 }
 
@@ -157,6 +236,8 @@ interface RunAnalysisResult {
   careerFit: string;
   readinessScore: number;
   matchScore: number;
+  semanticScore: number;
+  semanticMethod: string;
   profileCompleteness: number;
   skillCountScore: number;
   skillStrengths: string[];
@@ -164,6 +245,8 @@ interface RunAnalysisResult {
   recommendedSkills: string[];
   extractedSkills: string[];
   requiredSkills: string[];
+  skillWeights: Record<string, number>;
+  scoreExplanation: ScoreExplanation;
   roleIntelligence: RoleIntelligence;
   roleGoalSnapshot: string;
   skillProficiency: SkillProficiencyEntry[];
@@ -297,11 +380,15 @@ Based on their ACTUAL career goal and resume context, determine:
    - If they want ML/data science: include python, pytorch, etc.
    - Be realistic about what companies hiring for this role actually test
 3. A 5-stage learning roadmap for this specific role, each stage with 3-4 skills
+4. An importance weight (integer) for EACH of the 12 skills, reflecting how heavily
+   employers weight that skill for this role. The 12 weights MUST sum to exactly 100.
+   Core/defining skills get higher weights; peripheral skills get lower weights.
 
 Respond ONLY with valid JSON (no markdown, no backticks, no explanation):
 {
   "normalizedTitle": "string",
   "requiredSkills": ["skill1", "skill2", ...12 skills],
+  "skillWeights": { "skill1": 15, "skill2": 15, "skill3": 10, "...": "(all 12 skills, integers summing to 100)" },
   "roadmapStages": [
     { "title": "Foundations", "skills": ["skill1", "skill2", "skill3"] },
     { "title": "Core Skills", "skills": ["skill1", "skill2", "skill3"] },
@@ -312,10 +399,11 @@ Respond ONLY with valid JSON (no markdown, no backticks, no explanation):
 }
 
 Rules:
-- Use lowercase skill names consistently
+- Use lowercase skill names consistently (skillWeights keys must match requiredSkills exactly)
 - Skills must reflect the actual 2024-2026 job market for this exact role
 - Do NOT use generic templates — analyse the career goal carefully
 - requiredSkills must total exactly 12
+- skillWeights must contain all 12 skills and the values must sum to 100
 `;
 
   try {
@@ -663,6 +751,163 @@ function buildRoadmap(
 }
 
 // ---------------------------------------------------------------------------
+// Explainable, evidence-driven scoring engine
+//
+// Every number below is derived from documented constants and real evidence —
+// no clamping to flatter, no arbitrary boosts, and no Gemini-generated final
+// score. Skill weights are an input (from Role Intelligence); the overall score
+// is the weighted average of per-skill readiness computed here.
+// ---------------------------------------------------------------------------
+
+// readiness = 0.35·resume + 0.25·project + 0.20·github + 0.20·roadmap
+const EVIDENCE_WEIGHTS = { resume: 0.35, project: 0.25, github: 0.2, roadmap: 0.2 };
+
+// A skill only *listed* in the profile (self-reported, unverified) floors
+// readiness here so the card reads "Beginner / Low confidence" instead of 0%.
+const PROFILE_BASELINE = 18;
+
+// All raw spellings that normalise to a skill, so resume/project text saying
+// "reactjs" or "node" still counts toward "react" / "node.js".
+function skillVariants(skill: string): string[] {
+  const canonical = normaliseSkill(skill);
+  const variants = new Set<string>([canonical]);
+  for (const [alias, target] of Object.entries(SKILL_ALIASES)) {
+    if (target === canonical) variants.add(alias);
+  }
+  return [...variants].filter(Boolean);
+}
+
+function countOccurrences(haystack: string, needle: string): number {
+  if (!needle) return 0;
+  let count = 0;
+  let idx = haystack.indexOf(needle);
+  while (idx !== -1) {
+    count++;
+    idx = haystack.indexOf(needle, idx + needle.length);
+  }
+  return count;
+}
+
+// Graded 0-100 from a count using documented thresholds (auditable, not magic).
+function gradeFromCount(count: number, one: number, two: number, many: number): number {
+  if (count <= 0) return 0;
+  if (count === 1) return one;
+  if (count === 2) return two;
+  return many;
+}
+
+function resumeEvidenceScore(skill: string, resumeLower: string): number {
+  if (!resumeLower) return 0;
+  const total = skillVariants(skill).reduce(
+    (sum, v) => sum + countOccurrences(resumeLower, v),
+    0
+  );
+  return gradeFromCount(total, 60, 80, 100);
+}
+
+function projectEvidenceScore(skill: string, projects: ProjectEvidence[]): number {
+  if (!projects.length) return 0;
+  const variants = skillVariants(skill);
+  let matches = 0;
+  for (const p of projects) {
+    const hay = [p.title || "", p.description || "", ...(p.technologies || [])]
+      .join(" ")
+      .toLowerCase();
+    if (variants.some((v) => hay.includes(v))) matches++;
+  }
+  return gradeFromCount(matches, 70, 85, 100);
+}
+
+function githubEvidenceScore(
+  skill: string,
+  langCounts: Map<string, number>,
+  topics: Set<string>
+): number {
+  let repoCount = 0;
+  for (const [lang, count] of langCounts) {
+    if (skillsMatch(lang, skill)) repoCount += count;
+  }
+  if (repoCount === 0) {
+    // Not a primary language — fall back to repo topics (e.g. "docker", "rest-api").
+    for (const topic of topics) {
+      if (skillsMatch(topic, skill)) return 60;
+    }
+  }
+  return gradeFromCount(repoCount, 60, 80, 100);
+}
+
+// Confidence reflects how many independent sources corroborate the skill.
+function confidenceFromSources(sourceCount: number): ConfidenceLevel {
+  if (sourceCount >= 3) return "High";
+  if (sourceCount === 2) return "Medium";
+  return "Low";
+}
+
+function levelForReadiness(readiness: number): ProficiencyLevel {
+  if (readiness >= 85) return "Advanced";
+  if (readiness >= 70) return "Proficient";
+  if (readiness >= 45) return "Practicing";
+  if (readiness >= 20) return "Beginner";
+  return "Not started";
+}
+
+// Plain-language explanation built ONLY from the evidence actually found.
+function buildSkillReason(
+  skill: string,
+  found: string[],
+  missing: string[],
+  profileOnly: boolean
+): string {
+  const Skill = skill.charAt(0).toUpperCase() + skill.slice(1);
+  if (found.length === 0) {
+    return `No evidence found yet for ${skill} in your resume, projects, GitHub, or completed roadmap work.`;
+  }
+  if (profileOnly) {
+    return `${Skill} is listed in your profile but lacks supporting evidence from resume content, projects, GitHub repositories, or roadmap completion.`;
+  }
+  const foundText = found.join(", ");
+  const missingText = missing.length
+    ? ` Still missing: ${missing.join(", ")}.`
+    : " Evidence found across every tracked source.";
+  return `${Skill} is supported by ${foundText}.${missingText}`;
+}
+
+// Per-skill importance weights (percentages summing to 100) from Role
+// Intelligence. Falls back to equal weighting (1/N each) — still fully
+// explainable — when Gemini didn't supply valid weights (e.g. cached payloads).
+function deriveSkillWeights(
+  required: string[],
+  roleIntelligence: RoleIntelligence
+): Record<string, number> {
+  const raw = roleIntelligence.skillWeights;
+  const weights: Record<string, number> = {};
+
+  if (raw && typeof raw === "object") {
+    const normalisedRaw = new Map<string, number>();
+    for (const [key, value] of Object.entries(raw)) {
+      const n = Number(value);
+      if (Number.isFinite(n) && n > 0) normalisedRaw.set(normaliseSkill(key), n);
+    }
+    const allPresent = required.every((s) => normalisedRaw.has(s));
+    if (allPresent && required.length > 0) {
+      for (const skill of required) weights[skill] = normalisedRaw.get(skill)!;
+    }
+  }
+
+  // Equal-weight fallback when Gemini weights are absent or incomplete.
+  if (Object.keys(weights).length !== required.length) {
+    const equal = required.length ? 100 / required.length : 0;
+    for (const skill of required) weights[skill] = equal;
+  }
+
+  // Normalise to sum exactly 100 so contributions are interpretable as points.
+  const sum = required.reduce((s, sk) => s + (weights[sk] || 0), 0) || 1;
+  const normalized: Record<string, number> = {};
+  for (const skill of required) normalized[skill] = (weights[skill] || 0) * (100 / sum);
+  return normalized;
+}
+
+// ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------
 
@@ -676,6 +921,7 @@ export async function runAnalysis({
   manualSkills = [],
   weeklyProgress = [],
   resumeText: preExtractedText,
+  projects = [],
   cachedRoleIntelligence,
 }: RunAnalysisInput): Promise<RunAnalysisResult> {
 
@@ -726,12 +972,19 @@ export async function runAnalysis({
     ...manualSkillList,
   ]);
 
-  // ── 5. Match against required skills (fuzzy) ───────────────────────────
-  const strengths = required.filter((s) => userHasSkill(s, allUserSkills));
-  const gaps = required.filter((s) => !userHasSkill(s, allUserSkills));
+  // ── 5. Role skill weights (from Role Intelligence) ──────────────────────
+  // Each required skill carries an importance weight (summing to 100). The
+  // overall score is the weighted average of per-skill readiness — see §8.
+  const skillWeights = deriveSkillWeights(required, roleIntelligence);
 
-  const matchScore = required.length
-    ? Math.round((strengths.length / required.length) * 100)
+  // A rough binary skill-overlap %, used ONLY as the semantic-match last-resort
+  // baseline (§9). The real, weighted match score is computed by the engine (§8).
+  const skillOverlapBaseline = required.length
+    ? Math.round(
+        (required.filter((s) => userHasSkill(s, allUserSkills)).length /
+          required.length) *
+          100
+      )
     : 0;
 
   // ── 6. Profile completeness ─────────────────────────────────────────────
@@ -756,16 +1009,195 @@ export async function runAnalysis({
   const githubScoreResult: GithubScoreResult = scoreGithub(githubProfile, required);
   const linkedinScoreResult: LinkedInScoreResult = scoreLinkedIn(linkedinUrl);
 
-  // ── 8. Composite scores ─────────────────────────────────────────────────
+  // ── 8. Explainable, evidence-driven scoring engine ──────────────────────
+  // For every required skill we score four independent evidence sources
+  // (resume, projects, GitHub, roadmap) on 0-100, then:
+  //   readiness = 0.35·resume + 0.25·project + 0.20·github + 0.20·roadmap
+  // A skill only self-reported in the profile is floored at PROFILE_BASELINE.
+  // Overall match = Σ (skill weight% × readiness) — a pure weighted average,
+  // with no clamping, no boosts, and no hidden AI-generated score.
+  const resumeLower = resumeText.toLowerCase();
+
+  const githubLangCounts = new Map<string, number>();
+  for (const lang of githubProfile?.topLanguages || []) {
+    const name = normaliseSkill((lang as any)?.name);
+    if (name) githubLangCounts.set(name, (lang as any)?.count || 1);
+  }
+
+  // Repo topics + per-repo languages let non-primary-language skills (docker,
+  // rest api, …) still pick up GitHub evidence.
+  const githubTopics = new Set<string>();
+  for (const repo of (githubProfile as any)?.topRepos || []) {
+    for (const t of repo?.topics || []) githubTopics.add(normaliseSkill(t));
+    for (const l of repo?.languages || []) githubTopics.add(normaliseSkill(l));
+  }
+
+  const weeklyDoneSkills = new Set(
+    (weeklyProgress || []).map((w) => normaliseSkill(w.taskKey))
+  );
+
+  const skillProficiency: SkillProficiencyEntry[] = required.map((skill) => {
+    const resume = resumeEvidenceScore(skill, resumeLower);
+    const project = projectEvidenceScore(skill, projects);
+    const github = githubEvidenceScore(skill, githubLangCounts, githubTopics);
+    const roadmapDone =
+      manualSkillList.some((m) => skillsMatch(m, skill)) ||
+      [...weeklyDoneSkills].some((w) => skillsMatch(w, skill));
+    const roadmap = roadmapDone ? 100 : 0;
+    const profilePresent = profileSkills.some((s) => skillsMatch(s, skill));
+
+    const weightedEvidence =
+      EVIDENCE_WEIGHTS.resume * resume +
+      EVIDENCE_WEIGHTS.project * project +
+      EVIDENCE_WEIGHTS.github * github +
+      EVIDENCE_WEIGHTS.roadmap * roadmap;
+
+    let readinessRaw = weightedEvidence;
+    let profileBaselineApplied = false;
+    if (profilePresent && readinessRaw < PROFILE_BASELINE) {
+      readinessRaw = PROFILE_BASELINE;
+      profileBaselineApplied = true;
+    }
+    const readiness = Math.round(readinessRaw);
+
+    const sources = [
+      { label: "Resume", on: resume > 0 },
+      { label: "Projects", on: project > 0 },
+      { label: "GitHub", on: github > 0 },
+      { label: "Roadmap", on: roadmap > 0 },
+      { label: "Profile", on: profilePresent },
+    ];
+    const evidenceFound = sources.filter((s) => s.on).map((s) => s.label);
+    const evidenceMissing = sources.filter((s) => !s.on).map((s) => s.label);
+    const profileOnly = evidenceFound.length === 1 && profilePresent;
+    const confidence = confidenceFromSources(evidenceFound.length);
+
+    const weight = skillWeights[skill] || 0;
+    const contribution = (weight * readiness) / 100;
+    const lostPoints = (weight * (100 - readiness)) / 100;
+
+    const conceptCount =
+      readiness >= 85 ? 0 : readiness >= 70 ? 1 : readiness >= 45 ? 2 : 3;
+    const missingConcepts = conceptsForSkill(skill).slice(0, conceptCount);
+    const recommendations: SkillRecommendation[] = resourcesForSkill(skill).slice(0, 2);
+    const reason = buildSkillReason(skill, evidenceFound, evidenceMissing, profileOnly);
+
+    return {
+      name: skill,
+      weight,
+      readiness,
+      contribution,
+      lostPoints,
+      currentLevel: levelForReadiness(readiness),
+      targetLevel: "Advanced" as ProficiencyLevel,
+      confidence,
+      evidenceScores: { resume, project, github, roadmap },
+      evidenceFound,
+      evidenceMissing,
+      profileBaselineApplied,
+      missingConcepts,
+      recommendations,
+      reason,
+      known: evidenceFound.length > 0,
+    };
+  });
+
+  // Overall match = weighted average of readiness (Σ weight% × readiness / 100).
+  const matchScore = Math.round(
+    skillProficiency.reduce((sum, e) => sum + (e.weight * e.readiness) / 100, 0)
+  );
+
+  // Strengths/gaps derived from readiness; gaps ordered by points lost.
+  const strengths = skillProficiency
+    .filter((e) => e.readiness >= 60)
+    .map((e) => e.name);
+  const gaps = skillProficiency
+    .filter((e) => e.readiness < 60)
+    .sort((a, b) => b.lostPoints - a.lostPoints)
+    .map((e) => e.name);
+
+  // Auditable breakdown: contributions sum to the score, gaps to (100 − score).
+  const contributions: SkillContribution[] = skillProficiency
+    .map((e) => ({
+      name: e.name,
+      weight: Math.round(e.weight),
+      readiness: e.readiness,
+      points: Math.round(e.contribution),
+    }))
+    .sort((a, b) => b.points - a.points);
+
+  const largestGaps: SkillGapContribution[] = skillProficiency
+    .map((e) => ({
+      name: e.name,
+      weight: Math.round(e.weight),
+      readiness: e.readiness,
+      lostPoints: Math.round(e.lostPoints),
+    }))
+    .filter((e) => e.lostPoints > 0)
+    .sort((a, b) => b.lostPoints - a.lostPoints);
+
+  // Aggregate how many points each evidence source contributed to the overall
+  // score. These five numbers sum to the overall match (profile = the floor's
+  // extra credit), making the score fully decomposable.
+  let evResume = 0, evProject = 0, evGithub = 0, evRoadmap = 0, evProfile = 0;
+  for (const e of skillProficiency) {
+    const wf = e.weight / 100;
+    evResume += wf * EVIDENCE_WEIGHTS.resume * e.evidenceScores.resume;
+    evProject += wf * EVIDENCE_WEIGHTS.project * e.evidenceScores.project;
+    evGithub += wf * EVIDENCE_WEIGHTS.github * e.evidenceScores.github;
+    evRoadmap += wf * EVIDENCE_WEIGHTS.roadmap * e.evidenceScores.roadmap;
+    const weighted =
+      EVIDENCE_WEIGHTS.resume * e.evidenceScores.resume +
+      EVIDENCE_WEIGHTS.project * e.evidenceScores.project +
+      EVIDENCE_WEIGHTS.github * e.evidenceScores.github +
+      EVIDENCE_WEIGHTS.roadmap * e.evidenceScores.roadmap;
+    evProfile += wf * Math.max(0, e.readiness - weighted);
+  }
+
+  const scoreExplanation: ScoreExplanation = {
+    overall: matchScore,
+    formula:
+      "Overall Match = Σ (role skill weight × skill readiness). Each readiness = 0.35·resume + 0.25·projects + 0.20·GitHub + 0.20·roadmap.",
+    contributions,
+    largestGaps,
+    evidenceSummary: {
+      resume: Math.round(evResume),
+      project: Math.round(evProject),
+      github: Math.round(evGithub),
+      roadmap: Math.round(evRoadmap),
+      profile: Math.round(evProfile),
+    },
+  };
+
+  // ── 9. Semantic alignment (resume vs dynamic role profile) ──────────────
+  // Compares the resume against a profile *generated from Role Intelligence* —
+  // never a manually pasted job description. Degrades gracefully (embeddings →
+  // reasoning → skill-overlap) and never throws.
+  const roleProfileText = buildRoleProfileText({
+    normalizedTitle: careerFit,
+    requiredSkills: required,
+    roadmapStages: roleIntelligence.roadmapStages,
+  });
+
+  const { semanticScore, semanticMethod } = await computeSemanticAlignment({
+    resumeText,
+    roleProfileText,
+    normalizedTitle: careerFit,
+    requiredSkills: required,
+    skillMatchBaseline: skillOverlapBaseline,
+  }).then((r) => ({ semanticScore: r.semanticScore, semanticMethod: r.method }));
+
+  // ── 10. Composite scores ────────────────────────────────────────────────
   const skillCountScore = Math.min(100, allUserSkills.size * 8);
 
   const readinessScore = Math.round(
-    matchScore * 0.35 +
-    resumeAnalysis.resumeScore * 0.20 +
-    profileCompleteness * 0.15 +
-    skillCountScore * 0.10 +
-    githubScoreResult.score * 0.10 +
-    linkedinScoreResult.score * 0.05 +
+    matchScore * 0.25 +
+    semanticScore * 0.20 +
+    resumeAnalysis.resumeScore * 0.18 +
+    profileCompleteness * 0.12 +
+    skillCountScore * 0.08 +
+    githubScoreResult.score * 0.08 +
+    linkedinScoreResult.score * 0.04 +
     resumeAnalysis.atsScore * 0.05
   );
 
@@ -775,7 +1207,7 @@ export async function runAnalysis({
     resumeAnalysis.atsScore * 0.20
   );
 
-  // ── 9. Roadmap ──────────────────────────────────────────────────────────
+  // ── 11. Roadmap ─────────────────────────────────────────────────────────
   const { weeks: roadmap, stages: roadmapStages } = buildRoadmap(
     careerFit,
     roleIntelligence,
@@ -786,48 +1218,6 @@ export async function runAnalysis({
       weeklyDone: weeklyProgress,
     }
   );
-
-  // ── 10. Skill proficiency ───────────────────────────────────────────────
-  const githubLangs = new Set<string>(
-    Object.keys(githubProfile?.languageBytes || {}).map(normaliseSkill)
-  );
-
-  const skillProficiency: SkillProficiencyEntry[] = required.map((skill) => {
-    const inProfile = profileSkills.some((s) => skillsMatch(s, skill));
-    const inResume = resumeSkillList.some((s) => skillsMatch(s, skill));
-    const inManual = manualSkillList.some((s) => skillsMatch(s, skill));
-    const inGithub = [...githubLangs].some((s) => skillsMatch(s, skill));
-
-    const evidence: string[] = [];
-    if (inResume) evidence.push("resume");
-    if (inProfile) evidence.push("profile");
-    if (inGithub) evidence.push("github");
-    if (inManual) evidence.push("completed");
-
-    let level: SkillProficiencyEntry["level"];
-    let currentPct: number;
-    let gapPct: number;
-
-    if (evidence.length >= 3) {
-      level = "Confident"; currentPct = 95; gapPct = 0;
-    } else if (evidence.length === 2) {
-      level = "Confident"; currentPct = 80; gapPct = 5;
-    } else if (evidence.length === 1) {
-      level = "Practising"; currentPct = 55; gapPct = 35;
-    } else {
-      level = "Beginner"; currentPct = 10; gapPct = 90;
-    }
-
-    return {
-      name: skill,
-      level,
-      currentPct,
-      targetPct: 100,
-      gapPct,
-      evidence,
-      known: evidence.length > 0,
-    };
-  });
 
   // ── 11. Strengths & suggestions text ───────────────────────────────────
   const strengthsText: StrengthEntry[] = [];
@@ -904,6 +1294,8 @@ export async function runAnalysis({
     careerFit,
     readinessScore,
     matchScore,
+    semanticScore,
+    semanticMethod,
     profileCompleteness,
     skillCountScore,
     skillStrengths: strengths,
@@ -911,6 +1303,8 @@ export async function runAnalysis({
     recommendedSkills: gaps.slice(0, 5),
     extractedSkills: Array.from(allUserSkills),
     requiredSkills: required,
+    skillWeights,
+    scoreExplanation,
     roleIntelligence: {
       ...roleIntelligence,
       requiredSkills: required,

@@ -47,6 +47,58 @@ async function persistAnalysis(userId: any, result: any, hasResume: any) {
   });
 }
 
+// Pull the user's projects out of their stored analysis so the scoring engine
+// can use them as an independent evidence source. Projects live on AIAnalysis as
+// parallel arrays (projectTitles/Descriptions/Technologies) plus savedProjects
+// JSON written by the Projects page.
+function extractProjects(aiAnalysis: any) {
+  if (!aiAnalysis) return [];
+
+  const projects: { title: string; description: string; technologies: string[] }[] = [];
+
+  const titles: any[] = aiAnalysis.projectTitles || [];
+  const descriptions: any[] = aiAnalysis.projectDescriptions || [];
+  const technologies: any[] = aiAnalysis.projectTechnologies || [];
+
+  titles.forEach((title: any, i: number) => {
+    projects.push({
+      title: String(title || ""),
+      description: String(descriptions[i] || ""),
+      technologies: String(technologies[i] || "")
+        .split(/[,|·•]/g)
+        .map((s: string) => s.trim())
+        .filter(Boolean),
+    });
+  });
+
+  for (const raw of aiAnalysis.savedProjects || []) {
+    try {
+      const p = JSON.parse(raw);
+      const tech = Array.isArray(p.technologies)
+        ? p.technologies
+        : Array.isArray(p.tags)
+        ? p.tags
+        : [];
+      projects.push({
+        title: String(p.title || p.name || ""),
+        description: String(p.description || p.summary || ""),
+        technologies: tech.map((t: any) => String(t).trim()).filter(Boolean),
+      });
+    } catch {
+      /* skip malformed entries */
+    }
+  }
+
+  // Dedupe by title (savedProjects often mirror the parallel arrays).
+  const seen = new Set<string>();
+  return projects.filter((p) => {
+    const key = p.title.toLowerCase().trim();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 async function loadManualProgress(userId: any) {
   try {
     const [skills, weekly] = await Promise.all([
@@ -92,6 +144,7 @@ export const getAnalysis = async (req: any, res: any) => {
       linkedinUrl: (user as any).linkedin,
       manualSkills,
       weeklyProgress,
+      projects: extractProjects((user as any).aiAnalysis),
       cachedRoleIntelligence: {
         goalSnapshot: (user as any).aiAnalysis?.roleGoalSnapshot,
         requiredSkills: (user as any).aiAnalysis?.requiredSkills,
@@ -135,6 +188,7 @@ export const refreshAnalysis = async (req: any, res: any) => {
       linkedinUrl: (user as any).linkedin,
       manualSkills,
       weeklyProgress,
+      projects: extractProjects((user as any).aiAnalysis),
       cachedRoleIntelligence: {
         goalSnapshot: (user as any).aiAnalysis?.roleGoalSnapshot,
         requiredSkills: (user as any).aiAnalysis?.requiredSkills,
