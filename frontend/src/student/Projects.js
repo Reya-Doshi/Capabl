@@ -20,7 +20,6 @@ import {
   Plus,
   X,
   Sparkles,
-  Target,
 } from "lucide-react";
 
 import { useEffect, useState } from "react";
@@ -270,14 +269,6 @@ export default function Projects() {
           >
             <Video className="w-5 h-5" />
             Mock Interview
-          </a>
-
-          <a
-            href="/job-match"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
-          >
-            <Target className="w-5 h-5" />
-            Job Match
           </a>
 
           <a
