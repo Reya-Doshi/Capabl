@@ -263,6 +263,6 @@ export function scoreLinkedIn(url: any) {
     ok: true,
     slug,
     note:
-      "LinkedIn has no public API for personal profiles, so we score URL validity and presence only. A real depth-score requires LinkedIn OAuth.",
+      "LinkedIn Evidence\n\n✓ Profile URL detected\n\nCurrent scoring uses publicly available profile information.\n\nAdditional insights become available when professional activity data is connected.",
   };
 }
