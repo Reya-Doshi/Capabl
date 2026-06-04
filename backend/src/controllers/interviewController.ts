@@ -5,6 +5,7 @@ import {
   resolveTypeSelection,
   DEFAULT_QUESTION_BUDGET,
   PURPOSE_MAP,
+  ROLE_MAP,
 } from "../services/interviewTypes.js";
 import {
   buildSystemPrompt,
@@ -12,7 +13,19 @@ import {
   generateNextQuestion,
   evaluateTurn,
   generateScorecard,
+  generateRecommendation,
 } from "../services/interviewEngine.js";
+
+// Combine the selected purpose + role flavor into one human label, e.g.
+// purpose "Technical Interview" + role "Coding Interview" → "Technical Coding
+// Interview". This is what we surface to Rexa as {{interview_purpose}}.
+function combinedPurposeLabel(purposeKey: string, roleKey: string): string {
+  const purposeLabel = PURPOSE_MAP[purposeKey]?.label || purposeKey;
+  if (!roleKey || roleKey === "standard") return purposeLabel;
+  const roleLabel = ROLE_MAP[roleKey]?.label || "";
+  if (!roleLabel) return purposeLabel;
+  return `${purposeLabel.replace(/\s*Interview$/i, "").trim()} ${roleLabel}`.trim();
+}
 import {
   isVoiceAvailable,
   getVoiceStatus,
@@ -181,9 +194,19 @@ export const startInterview = async (req: any, res: any) => {
     if (mode === "voice") {
       const dynamicVariables = {
         candidate_name: candidateContext.identity.name || "the candidate",
-        career_fit: candidateContext.careerFit || "this role",
-        interview_purpose: PURPOSE_MAP[type.purpose]?.label || type.purpose,
+        // {{career_fit}} → the candidate's saved career goal (falls back to the
+        // analysed target role when no explicit goal is set).
+        career_fit:
+          candidateContext.identity.careerGoal ||
+          candidateContext.careerFit ||
+          "this role",
+        // {{interview_purpose}} → purpose + role flavor combined.
+        interview_purpose: combinedPurposeLabel(type.purpose, type.role),
+        // {{level}} → selected difficulty.
         level: type.level,
+        // {{total_questions}} → selected question budget.
+        total_questions: String(type.totalQuestions),
+        // {{system_prompt}} → the fully assembled candidate-context prompt.
         // Retell injects these via {{var}} substitution inside the agent's
         // system prompt (configured in their dashboard) — see SETUP guide.
         system_prompt: systemPrompt.slice(0, 8000),
@@ -351,12 +374,14 @@ export const endVoiceCall = async (req: any, res: any) => {
     if (session.mode !== "voice")
       return res.status(400).json({ message: "Not a voice session" });
 
+    let retellRawTranscript: any = [];
     let transcript: any = [];
     let durationSeconds: any = null;
 
     if (session.retellCallId && isVoiceAvailable()) {
       try {
         const call = await getCall(session.retellCallId);
+        retellRawTranscript = call?.transcript_object || call?.transcript || [];
         transcript = normaliseTranscript(call);
         durationSeconds =
           typeof call?.end_timestamp === "number" &&
@@ -368,14 +393,29 @@ export const endVoiceCall = async (req: any, res: any) => {
       }
     }
 
+    // The voice agent often says its greeting ("Hi <name>!") as its own turn,
+    // which pairs up as a pseudo-question. Drop any opener that isn't a genuine
+    // question (no "?") BEFORE the budget cap — otherwise the greeting eats a
+    // slot and pushes a real question out of the window.
+    const pairedTurns = pairTranscriptToTurns(transcript);
+    const questionFilteredTurns = pairedTurns.filter(
+      (t: any) => t.question && /\?/.test(t.question)
+    );
+
+    console.log("[endVoiceCall] Retell raw transcript:", retellRawTranscript);
+    console.log("[endVoiceCall] paired turns before question filter:", pairedTurns);
+    console.log(
+      "[endVoiceCall] paired turns after question filter:",
+      questionFilteredTurns
+    );
+
     // Safety net: cap turns to the session's question budget. Even if the
     // frontend auto-stop and the prompt-level hard-limit both fail and the
     // Retell agent asks extra questions, those overflow Q/As never reach
     // the scorecard.
-    const rawTurns = pairTranscriptToTurns(transcript);
     const turns = session.totalQuestions
-      ? rawTurns.slice(0, session.totalQuestions)
-      : rawTurns;
+      ? questionFilteredTurns.slice(0, session.totalQuestions)
+      : questionFilteredTurns;
 
     await prisma.interviewSession.update({
   where: { id: sessionId },
@@ -392,6 +432,75 @@ export const endVoiceCall = async (req: any, res: any) => {
     console.error("endVoiceCall error:", error);
     res.status(500).json({ message: error.message });
   }
+};
+
+// ---------------------------------------------------------------------------
+// POST /api/interviews/webhook  (Retell webhook)
+//
+// Retell expects a fast 2xx response. Acknowledge immediately, then process
+// the payload asynchronously so retries do not create duplicate work.
+// ---------------------------------------------------------------------------
+export const retellWebhook = (req: any, res: any) => {
+  console.log("[retellWebhook] full payload:", req.body);
+  res.sendStatus(200);
+
+  void (async () => {
+    try {
+      const payload = req.body || {};
+      const call = payload.call || payload;
+      const callId = call?.call_id;
+      if (!callId) {
+        console.warn("[retellWebhook] missing call_id");
+        return;
+      }
+
+      const transcript = normaliseTranscript(call);
+      const pairedTurns = pairTranscriptToTurns(transcript);
+      const questionFilteredTurns = pairedTurns.filter(
+        (t: any) => t.question && /\?/.test(t.question)
+      );
+
+      console.log("[retellWebhook] event:", payload.event || null);
+      console.log("[retellWebhook] call_id:", callId);
+      console.log(
+        "[retellWebhook] raw transcript:",
+        call?.transcript_object || call?.transcript || []
+      );
+      console.log("[retellWebhook] paired turns before question filter:", pairedTurns);
+      console.log(
+        "[retellWebhook] paired turns after question filter:",
+        questionFilteredTurns
+      );
+
+      const session: any = await prisma.interviewSession.findUnique({
+        where: { retellCallId: callId },
+      });
+      if (!session) {
+        console.warn("[retellWebhook] no interview session for call_id:", callId);
+        return;
+      }
+
+      const turns = session.totalQuestions
+        ? questionFilteredTurns.slice(0, session.totalQuestions)
+        : questionFilteredTurns;
+      const durationSeconds =
+        typeof call?.end_timestamp === "number" &&
+        typeof call?.start_timestamp === "number"
+          ? Math.round((call.end_timestamp - call.start_timestamp) / 1000)
+          : session.durationSeconds;
+
+      await prisma.interviewSession.update({
+        where: { id: session.id },
+        data: {
+          transcript: transcript as any,
+          turns: turns as any,
+          durationSeconds,
+        },
+      });
+    } catch (error: any) {
+      console.error("[retellWebhook] async processing error:", error);
+    }
+  })();
 };
 
 // ---------------------------------------------------------------------------
@@ -443,12 +552,53 @@ async function finalise(sessionId: any, userId: any, res: any) {
 
   const card = await generateScorecard({ candidateContext, type }, turns);
 
+  // Fold the per-question breakdown (answerQuality + one-line feedback) back
+  // into the stored turns so the Past-interview review shows it. Additive —
+  // existing fields on each turn are preserved.
+  const enrichedTurns = turns.map((t: any, i: number) => {
+    const qb = card.questionBreakdown?.[i];
+    return qb
+      ? {
+          ...t,
+          answerQuality: qb.answerQuality,
+          feedback: qb.feedback || t.feedback || null,
+        }
+      : t;
+  });
+
+  // Apply the readinessShift to the candidate's overall dashboard readiness
+  // (AIAnalysis.readinessScore). Only touch an existing analysis row so we
+  // never create a partial one. The per-interview snapshot is also stored on
+  // the session below.
+  let dashboardReadiness: number | null = null;
+  try {
+    const ai = await prisma.aIAnalysis.findUnique({
+      where: { userId },
+      select: { readinessScore: true },
+    });
+    if (ai && ai.readinessScore != null && card.readinessShift) {
+      dashboardReadiness = Math.max(
+        0,
+        Math.min(100, ai.readinessScore + card.readinessShift)
+      );
+      await prisma.aIAnalysis.update({
+        where: { userId },
+        data: { readinessScore: dashboardReadiness },
+      });
+    } else if (ai) {
+      dashboardReadiness = ai.readinessScore ?? null;
+    }
+  } catch (e: any) {
+    console.warn("[finalise] readinessShift apply failed:", e.message);
+  }
+
   const updated = await prisma.interviewSession.update({
     where: { id: sessionId },
     data: {
       status: "finished",
       finishedAt: new Date(),
-      score: card.overall,
+      turns: enrichedTurns as any,
+      score: Math.round(card.overall),
       technicalScore: card.scores.technical,
       communicationScore: card.scores.communication,
       problemSolvingScore: card.scores.problemSolving,
@@ -468,18 +618,24 @@ async function finalise(sessionId: any, userId: any, res: any) {
   res.json({
     sessionId,
     status: "finished",
-    score: updated.score,
+    score: card.overall, // one-decimal precision for display
     scores: card.scores,
     summary: updated.summary,
+    verdict: card.verdict,
     strengths: updated.strengths,
     weaknesses: updated.weaknesses,
+    improvements: card.improvements,
     skillGaps: updated.skillGaps,
     advice: updated.advice,
     improvementPlan: updated.improvementPlan,
+    nextSteps: card.nextSteps,
+    questionBreakdown: card.questionBreakdown,
     readinessScore: updated.readinessScore,
+    readinessShift: card.readinessShift,
+    dashboardReadiness,
     nextAdaptiveQuestion: card.nextAdaptiveQuestion,
     durationSeconds: session.durationSeconds,
-    turns,
+    turns: enrichedTurns,
     transcript: session.transcript,
   });
 }
@@ -520,6 +676,40 @@ export const getInterview = async (req: any, res: any) => {
     const { contextSnapshot, agentPrompt, ...rest } = session;
     res.json(rest);
   } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ---------------------------------------------------------------------------
+// GET /api/interviews/recommendation
+//   → Gemini-picked interview config tailored to the candidate's profile.
+//     Used by the "Recommended for you" banner. Best-effort: the frontend
+//     applies its own 3s timeout and simply hides the banner on any failure.
+// ---------------------------------------------------------------------------
+export const recommendInterview = async (req: any, res: any) => {
+  try {
+    const userId = req.user.id;
+    const user: any = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { aiAnalysis: true },
+    });
+    if (!user) return res.status(404).json({ message: "Not found" });
+
+    const ai = user.aiAnalysis;
+    const skillGaps: string[] = ai?.weaknesses || ai?.missingSkills || [];
+    const projectCount = (ai?.projectTitles || []).length;
+
+    const rec = await generateRecommendation({
+      careerGoal: user.careerGoal,
+      careerFit: ai?.careerFit,
+      readinessScore: ai?.readinessScore ?? null,
+      skillGaps,
+      projectCount,
+    });
+
+    res.json(rec);
+  } catch (error: any) {
+    console.error("recommendInterview error:", error.message);
     res.status(500).json({ message: error.message });
   }
 };

@@ -27,7 +27,6 @@ import {
   STAGE_MAP,
   MEDIUM_MAP,
   FORMAT_MAP,
-  resolveWeights,
   DEFAULT_QUESTION_BUDGET,
 } from "./interviewTypes.js";
 import { contextToPromptBlock } from "./candidateContext.js";
@@ -93,6 +92,12 @@ export interface ScorecardScores {
   culturalFit: number;
 }
 
+export interface QuestionBreakdownItem {
+  question: string;
+  answerQuality: string; // Excellent | Good | Average | Weak
+  feedback: string;
+}
+
 export interface Scorecard {
   scores: ScorecardScores;
   overall: number;
@@ -104,6 +109,12 @@ export interface Scorecard {
   advice: string[];
   nextAdaptiveQuestion: string | null;
   readinessScore: number;
+  // --- Richer scorecard (new evaluation prompt) ---------------------------
+  verdict: string;
+  improvements: string[];
+  questionBreakdown: QuestionBreakdownItem[];
+  nextSteps: string[];
+  readinessShift: number; // -5..+5 — how much this interview shifts dashboard readiness
 }
 
 export interface OpenerResult {
@@ -130,22 +141,28 @@ interface RawTurnEval {
   dims?: Partial<TurnDims>;
 }
 
-// Loose shape of what parseJsonLoose returns for scorecard generation
+// Loose shape of what parseJsonLoose returns for scorecard generation.
+// Supports both the new evaluation prompt field names (technicalDepth,
+// cultureFit, overallScore, verdict, improvements, questionBreakdown,
+// readinessShift, nextSteps) and the legacy ones for backward safety.
 interface RawScorecard {
-  scores?: Partial<ScorecardScores>;
+  scores?: Record<string, number>;
   overall?: number;
+  overallScore?: number;
   summary?: string;
+  verdict?: string;
   strengths?: unknown[];
   weaknesses?: unknown[];
+  improvements?: unknown[];
   skillGaps?: unknown[];
   improvementPlan?: unknown[];
   advice?: unknown[];
+  nextSteps?: unknown[];
+  questionBreakdown?: unknown[];
   nextAdaptiveQuestion?: string;
   readinessScore?: number;
+  readinessShift?: number;
 }
-
-// Weights map returned by resolveWeights
-type DimWeights = Record<keyof ScorecardScores, number>;
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -448,6 +465,12 @@ function defaultScorecard(): Scorecard {
     advice: [],
     nextAdaptiveQuestion: null,
     readinessScore: 70,
+    verdict:
+      "Interview completed successfully. Detailed AI analysis unavailable due to temporary service load.",
+    improvements: ["AI evaluation temporarily unavailable"],
+    questionBreakdown: [],
+    nextSteps: [],
+    readinessShift: 0,
   };
 }
 
@@ -476,55 +499,36 @@ export async function generateScorecard(
   turns: ConversationTurn[]
 ): Promise<Scorecard> {
   try {
-    const weights = resolveWeights(type.purpose) as DimWeights;
-    const systemPrompt = buildSystemPrompt({ candidateContext, type });
     const model = getModel(0.4);
 
-    const qaText = turns
+    const transcript = turns
       .map(
         (t, i) =>
           `Q${i + 1}: ${t.question}\nA${i + 1}: ${t.answer || "(no answer)"}`
       )
       .join("\n\n");
 
-    const weightLine = (Object.entries(weights) as [keyof ScorecardScores, number][])
-      .map(([k, v]) => `${k} ${v}%`)
-      .join(" · ");
+    const careerFit =
+      candidateContext.identity.careerGoal ||
+      candidateContext.careerFit ||
+      "this role";
+    const interviewPurpose = combinedPurposeLabelFor(type.purpose, type.role);
 
-    const prompt = `${systemPrompt}
-
-The interview is complete. Here is the transcript:
-
-${qaText}
-
-Score the candidate on each dimension 0-100 (integer). Then compute the overall score as the WEIGHTED AVERAGE using these weights: ${weightLine}.
-
-Also identify concrete strengths, weaknesses, skill gaps (specific tech/topics they should learn), and a 3-step improvement plan.
-
-The candidate's current career goal is "${
-      candidateContext.identity.careerGoal || "n/a"
-    }" and target role is "${candidateContext.careerFit}".
-
-Output JSON only — no markdown fences — in this exact shape:
-{
-  "scores": {
-    "technical": <0-100>,
-    "communication": <0-100>,
-    "problemSolving": <0-100>,
-    "confidence": <0-100>,
-    "clarity": <0-100>,
-    "culturalFit": <0-100>
-  },
-  "overall": <0-100>,
-  "summary": "<2-3 sentence overall verdict>",
-  "strengths": ["<bullet>", "<bullet>", "<bullet>"],
-  "weaknesses": ["<bullet>", "<bullet>"],
-  "skillGaps": ["<specific skill or topic>", "<specific skill or topic>"],
-  "improvementPlan": ["<concrete step>", "<concrete step>", "<concrete step>"],
-  "advice": ["<short actionable next step>", "<short actionable next step>"],
-  "nextAdaptiveQuestion": "<one question they should expect next time, based on what was weakest>",
-  "readinessScore": <0-100>
-}`;
+    // ---- New, stricter scorecard prompt (Part 4) --------------------------
+    const prompt = `You are an expert technical recruiter evaluating a mock interview. The candidate was interviewing for ${careerFit} roles at ${type.level} difficulty. The interview type was ${interviewPurpose}.
+Here is the full interview transcript:
+${transcript}
+Evaluate strictly and honestly. Do not be encouraging or generic. Be specific to what was actually said.
+Return a JSON object with exactly these fields:
+scores: object containing technicalDepth out of 10, communication out of 10, problemSolving out of 10, confidence out of 10, clarity out of 10, cultureFit out of 10
+overallScore: weighted average — technicalDepth times 0.30 plus communication times 0.25 plus problemSolving times 0.20 plus confidence times 0.10 plus clarity times 0.10 plus cultureFit times 0.05 — rounded to one decimal
+verdict: one sentence honest summary of the candidate's overall performance
+strengths: array of exactly 3 strings — specific things the candidate did well with direct reference to what they said
+improvements: array of exactly 3 strings — specific gaps with direct reference to weak answers
+questionBreakdown: array of objects, one per question, each containing question as string, answerQuality as Excellent or Good or Average or Weak, and feedback as one sentence. Only include turns in questionBreakdown where Rexa asked a genuine interview question. Do not include the opening greeting.
+readinessShift: a number between minus 5 and plus 5 representing how much this interview performance should shift the candidate's overall Capabl readiness score
+nextSteps: array of exactly 2 strings — specific actionable things the candidate should do before their next interview based on their weak areas
+Return only valid JSON. No markdown. No explanation outside the JSON.`;
 
     const result = await callGeminiWithRetry(() => model.generateContent(prompt));
     const raw = result.response.text().trim();
@@ -532,57 +536,196 @@ Output JSON only — no markdown fences — in this exact shape:
 
     if (!parsed) {
       return {
+        ...defaultScorecard(),
         scores: zeroScores(),
         overall: 0,
         summary: "Could not parse evaluation. " + raw.slice(0, 200),
+        verdict: "Could not parse evaluation. " + raw.slice(0, 200),
         strengths: [],
         weaknesses: [],
+        improvements: [],
         skillGaps: [],
         improvementPlan: [],
         advice: [],
+        nextSteps: [],
+        questionBreakdown: [],
         nextAdaptiveQuestion: null,
         readinessScore: 0,
+        readinessShift: 0,
       };
     }
 
+    // The new prompt scores each dimension out of 10. We scale to the 0-100
+    // scale the rest of the app (DB columns, dashboards, history) expects.
+    const s = parsed.scores || {};
+    const score100 = (v: unknown) => clamp100(Math.round(Number(v) * 10));
     const scores: ScorecardScores = {
-      technical: clamp100(parsed.scores?.technical),
-      communication: clamp100(parsed.scores?.communication),
-      problemSolving: clamp100(parsed.scores?.problemSolving),
-      confidence: clamp100(parsed.scores?.confidence),
-      clarity: clamp100(parsed.scores?.clarity),
-      culturalFit: clamp100(parsed.scores?.culturalFit),
+      technical: score100(s.technicalDepth ?? s.technical),
+      communication: score100(s.communication),
+      problemSolving: score100(s.problemSolving),
+      confidence: score100(s.confidence),
+      clarity: score100(s.clarity),
+      culturalFit: score100(s.cultureFit ?? s.culturalFit),
     };
 
-    // Recompute the weighted overall ourselves so it always matches the rubric
-    // and the dimension scores — the model is allowed to suggest one, but we
-    // don't trust it implicitly.
-    const weighted = Math.round(
-      (scores.technical * weights.technical +
-        scores.communication * weights.communication +
-        scores.problemSolving * weights.problemSolving +
-        scores.confidence * weights.confidence +
-        scores.clarity * weights.clarity +
-        scores.culturalFit * weights.culturalFit) /
-        100
-    );
+    // Recompute the weighted overall ourselves (on the 0-100 scale) using the
+    // exact weights from the spec, so it always matches the dimension scores.
+    const overall =
+      Math.round(
+        (scores.technical * 0.3 +
+          scores.communication * 0.25 +
+          scores.problemSolving * 0.2 +
+          scores.confidence * 0.1 +
+          scores.clarity * 0.1 +
+          scores.culturalFit * 0.05) *
+          10
+      ) / 10;
+
+    const verdict = String(parsed.verdict || parsed.summary || "");
+    const improvements = arr(parsed.improvements).length
+      ? arr(parsed.improvements)
+      : arr(parsed.weaknesses);
+    const nextSteps = arr(parsed.nextSteps).length
+      ? arr(parsed.nextSteps)
+      : arr(parsed.advice);
+
+    const questionBreakdown: QuestionBreakdownItem[] = Array.isArray(
+      parsed.questionBreakdown
+    )
+      ? parsed.questionBreakdown.map((q: any, i: number) => ({
+          question: String(q?.question || turns[i]?.question || ""),
+          answerQuality: String(q?.answerQuality || ""),
+          feedback: String(q?.feedback || ""),
+        }))
+      : [];
+
+    const readinessShift = clampShift(parsed.readinessShift);
 
     return {
       scores,
-      overall: weighted,
-      summary: String(parsed.summary || ""),
+      overall,
+      // Map verdict → summary so the existing DB column / history / modal keep
+      // working unchanged.
+      summary: verdict,
+      verdict,
       strengths: arr(parsed.strengths),
-      weaknesses: arr(parsed.weaknesses),
+      // Map improvements → weaknesses for the existing column / modal.
+      weaknesses: improvements,
+      improvements,
       skillGaps: arr(parsed.skillGaps),
-      improvementPlan: arr(parsed.improvementPlan),
-      advice: arr(parsed.advice),
+      improvementPlan: nextSteps,
+      // Map nextSteps → advice for the existing column.
+      advice: nextSteps,
+      nextSteps,
+      questionBreakdown,
       nextAdaptiveQuestion: parsed.nextAdaptiveQuestion || null,
-      readinessScore: clamp100(parsed.readinessScore ?? weighted),
+      // Per-interview readiness snapshot = where the dashboard score lands
+      // after applying the shift (controller computes & persists the dashboard
+      // value; here we keep a sensible standalone number too).
+      readinessScore: clamp100(
+        (Number(candidateContext.readinessScore) || overall) + readinessShift
+      ),
+      readinessShift,
     };
   } catch (error) {
     console.error("Gemini overloaded:", error);
     return defaultScorecard();
   }
+}
+
+// Local copy of the purpose+role label combiner (kept here so the engine has
+// no dependency on the controller). Mirrors combinedPurposeLabel().
+function combinedPurposeLabelFor(purposeKey: string, roleKey: string): string {
+  const purposeLabel = PURPOSE_MAP[purposeKey]?.label || purposeKey;
+  if (!roleKey || roleKey === "standard") return purposeLabel;
+  const roleLabel = ROLE_MAP[roleKey]?.label || "";
+  if (!roleLabel) return purposeLabel;
+  return `${purposeLabel.replace(/\s*Interview$/i, "").trim()} ${roleLabel}`.trim();
+}
+
+function clampShift(n: unknown): number {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return 0;
+  return Math.max(-5, Math.min(5, Math.round(v)));
+}
+
+// ---------------------------------------------------------------------------
+// PROFILE-BASED RECOMMENDATION (Part 3)
+//
+// One quick Gemini call that recommends an interview configuration tailored to
+// the candidate's current profile. The caller (controller) applies a hard
+// timeout so this never blocks the page.
+// ---------------------------------------------------------------------------
+
+export interface RecommendationInput {
+  careerGoal?: string | null;
+  careerFit?: string | null;
+  readinessScore?: number | null;
+  skillGaps?: string[];
+  projectCount?: number;
+}
+
+export interface RecommendationResult {
+  purpose: string;
+  roleFlavor: string;
+  difficulty: string;
+  questionBudget: number;
+  reason: string;
+}
+
+export async function generateRecommendation(
+  input: RecommendationInput
+): Promise<RecommendationResult> {
+  const purposeKeys = Object.keys(PURPOSE_MAP);
+  const roleKeys = Object.keys(ROLE_MAP);
+
+  const model = getModel(0.5);
+  const prompt = `You are a career coach picking the single most useful mock-interview configuration for a candidate, based on their profile.
+
+CANDIDATE PROFILE
+- Career goal / target role: ${input.careerGoal || input.careerFit || "n/a"}
+- Current readiness score: ${input.readinessScore ?? "n/a"}/100
+- Known skill gaps: ${(input.skillGaps || []).slice(0, 8).join(", ") || "none recorded"}
+- Number of projects: ${input.projectCount ?? 0}
+
+Pick exactly one configuration. Choose values ONLY from these allowed options:
+- purpose: ${purposeKeys.join(" | ")}
+- roleFlavor: ${roleKeys.join(" | ")}
+- difficulty: easy | medium | hard
+- questionBudget: 4 | 6 | 8 | 10
+
+Guidance: lower readiness or few projects → easier difficulty and a screening/behavioral focus; strong profile → harder difficulty and technical/role-specific depth. The reason must be ONE sentence, specific to this candidate, explaining why this config helps them most right now.
+
+Return ONLY valid JSON, no markdown:
+{
+  "purpose": "<one allowed purpose key>",
+  "roleFlavor": "<one allowed roleFlavor key>",
+  "difficulty": "<easy|medium|hard>",
+  "questionBudget": <4|6|8|10>,
+  "reason": "<one sentence>"
+}`;
+
+  const result = await callGeminiWithRetry(() => model.generateContent(prompt));
+  const raw = result.response.text().trim();
+  const parsed = (parseJsonLoose(raw) ?? {}) as Partial<RecommendationResult>;
+
+  const purpose = purposeKeys.includes(String(parsed.purpose))
+    ? String(parsed.purpose)
+    : "technical";
+  const roleFlavor = roleKeys.includes(String(parsed.roleFlavor))
+    ? String(parsed.roleFlavor)
+    : "standard";
+  const difficulty = ["easy", "medium", "hard"].includes(String(parsed.difficulty))
+    ? String(parsed.difficulty)
+    : "medium";
+  const questionBudget = [4, 6, 8, 10].includes(Number(parsed.questionBudget))
+    ? Number(parsed.questionBudget)
+    : 6;
+  const reason =
+    String(parsed.reason || "").trim() ||
+    "Tuned to your current profile to give you the most useful practice right now.";
+
+  return { purpose, roleFlavor, difficulty, questionBudget, reason };
 }
 
 // ---------------------------------------------------------------------------
