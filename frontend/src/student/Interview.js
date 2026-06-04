@@ -63,6 +63,85 @@ const DIM_LABELS = {
   culturalFit: "Cultural fit",
 };
 
+// Card-click explanations (Part 2). Keyed by catalog key — covers both Purpose
+// cards and Role-flavor cards. Shown in an inline info box below the card row.
+const INTERVIEW_INFO = {
+  // ---- Purpose cards ----
+  screening: {
+    bestFor: "any early stage application",
+    willAsk: "resume basics, role motivation, availability",
+    recommendedWhen: "you have a first call coming up",
+  },
+  technical: {
+    bestFor: "software engineering roles",
+    willAsk: "system design, architecture decisions, debugging, coding concepts",
+    recommendedWhen: "you have a technical round at a product company",
+  },
+  behavioral: {
+    bestFor: "all roles",
+    willAsk: "STAR format stories about teamwork, failure, ownership, conflict",
+    recommendedWhen: "you have an HR or culture round",
+  },
+  situational: {
+    bestFor: "product and leadership roles",
+    willAsk: "hypothetical job scenarios and how you would handle them",
+    recommendedWhen: "you are applying for roles with decision making responsibility",
+  },
+  case: {
+    bestFor: "product, consulting, business roles",
+    willAsk: "open ended business or technical cases to walk through",
+    recommendedWhen: "you are targeting product manager or consulting roles",
+  },
+  "cultural-fit": {
+    bestFor: "startups and product companies",
+    willAsk: "values, motivation, working style, team alignment",
+    recommendedWhen: "company culture is a big part of the role",
+  },
+  competency: {
+    bestFor: "structured corporate hiring",
+    willAsk: "specific competency mapped answers for each role requirement",
+    recommendedWhen: "applying to large companies with structured hiring",
+  },
+  stress: {
+    bestFor: "high pressure roles",
+    willAsk: "rapid fire and tough questions to test composure",
+    recommendedWhen: "you want to pressure test yourself before a hard interview",
+  },
+  // ---- Role-flavor cards ----
+  coding: {
+    bestFor: "engineering roles",
+    willAsk:
+      "live style coding problems explained verbally, time and space complexity, approach and tradeoffs",
+    recommendedWhen: "you have a coding round coming up",
+  },
+  dsa: {
+    bestFor: "big tech engineering roles",
+    willAsk: "data structures and algorithm reasoning explained verbally",
+    recommendedWhen: "targeting FAANG or product engineering companies",
+  },
+  portfolio: {
+    bestFor: "designers, developers, AI engineers",
+    willAsk: "deep dive into your actual projects, decisions made, outcomes",
+    recommendedWhen: "your projects are your strongest asset",
+  },
+  presentation: {
+    bestFor: "product and leadership roles",
+    willAsk: "follow up questions on a topic you present",
+    recommendedWhen: "role requires communication and structured thinking",
+  },
+  working: {
+    bestFor: "any hands on role",
+    willAsk: "simulate a slice of actual job tasks verbally",
+    recommendedWhen: "you want the most realistic interview simulation",
+  },
+  "resume-discussion": {
+    bestFor: "all roles",
+    willAsk: "walk through every line of your resume, explain gaps, justify claims",
+    recommendedWhen:
+      "your resume has strong content but you struggle to talk about it",
+  },
+};
+
 export default function Interview() {
   const [loading, setLoading] = useState(true);
   const [meta, setMeta] = useState(null); // catalog + sessions + performance + voice
@@ -76,6 +155,9 @@ export default function Interview() {
   const [format, setFormat] = useState("one-on-one");
   const [level, setLevel] = useState("medium");
   const [totalQuestions, setTotalQuestions] = useState(6);
+
+  // Profile-based recommended config (Part 3 banner)
+  const [recommendation, setRecommendation] = useState(null);
 
   // Live session state
   const [session, setSession] = useState(null);
@@ -125,6 +207,35 @@ export default function Interview() {
       retellRef.current?.stopCall?.();
     };
   }, [fetchMeta]);
+
+  // Part 3 — fetch the profile-based recommendation on load. Hard 3s timeout;
+  // on any failure or timeout we simply never show the banner (non-blocking).
+  useEffect(() => {
+    let cancelled = false;
+    axios
+      .get(`${API}/api/interviews/recommendation`, {
+        headers: authHeaders(),
+        timeout: 3000,
+      })
+      .then(({ data }) => {
+        if (!cancelled && data?.reason) setRecommendation(data);
+      })
+      .catch(() => {
+        /* silent — banner just doesn't appear */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const applyRecommendation = () => {
+    if (!recommendation) return;
+    if (recommendation.purpose) setPurpose(recommendation.purpose);
+    if (recommendation.roleFlavor) setRole(recommendation.roleFlavor);
+    if (recommendation.difficulty) setLevel(recommendation.difficulty);
+    if (recommendation.questionBudget)
+      setTotalQuestions(recommendation.questionBudget);
+  };
 
   // -------------------- VOICE (Retell) plumbing ---------------------------
   const teardownRetell = () => {
@@ -612,12 +723,39 @@ export default function Interview() {
             Every selection changes how {voiceStatus.interviewerName || "Rexa"} prompts and grades you.
           </p>
 
+          {/* Part 3 — profile-based recommendation banner */}
+          {recommendation && (
+            <div className="bg-gradient-to-r from-[#fff3df] to-[#fff8ec] border border-[#f3e3bf] rounded-2xl p-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-3">
+              <p className="flex-1 text-sm text-[#7a5a16] font-medium">
+                <span className="font-bold">⚡ Recommended for you</span> —{" "}
+                {recommendation.reason}
+              </p>
+              <button
+                onClick={applyRecommendation}
+                className="shrink-0 h-10 px-4 rounded-xl bg-[#1d1d1f] text-white text-sm font-semibold hover:opacity-90"
+              >
+                Apply this config
+              </button>
+            </div>
+          )}
+
           <Section title="Purpose" subtitle="What kind of interview is this?">
-            <ChipGrid items={purposes} value={purpose} onChange={setPurpose} />
+            <ChipGrid
+              items={purposes}
+              value={purpose}
+              onChange={setPurpose}
+              infoMap={INTERVIEW_INFO}
+            />
           </Section>
 
           <Section title="Role flavor" subtitle="Layer in a role-specific style">
-            <ChipGrid items={roles} value={role} onChange={setRole} compact />
+            <ChipGrid
+              items={roles}
+              value={role}
+              onChange={setRole}
+              compact
+              infoMap={INTERVIEW_INFO}
+            />
           </Section>
 
           <div className="grid md:grid-cols-3 gap-5 mb-6">
@@ -767,30 +905,73 @@ function Section({ title, subtitle, children }) {
   );
 }
 
-function ChipGrid({ items, value, onChange, compact }) {
+function ChipGrid({ items, value, onChange, compact, infoMap }) {
+  // Which card's inline explanation is expanded (Part 2). Clicking a card both
+  // selects it and toggles its info box; clicking the same card again hides it.
+  const [openKey, setOpenKey] = useState(null);
+
+  const handleClick = (key) => {
+    onChange(key);
+    if (infoMap) setOpenKey((prev) => (prev === key ? null : key));
+  };
+
+  const openItem = openKey ? items.find((it) => it.key === openKey) : null;
+
   return (
-    <div className={`grid gap-3 ${compact ? "sm:grid-cols-3 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
-      {items.map((it) => {
-        const active = value === it.key;
-        return (
-          <button
-            key={it.key}
-            onClick={() => onChange(it.key)}
-            className={`text-left p-4 rounded-2xl border-2 transition-all ${
-              active
-                ? "border-[#c89a2b] bg-[#fff8ec]"
-                : "border-[#ece4d4] hover:border-[#c89a2b]/40 bg-white"
-            }`}
-          >
-            <h3 className="font-semibold text-[#1d1d1f] text-sm capitalize">
-              {it.label}
-            </h3>
-            {it.description && (
-              <p className="text-xs text-slate-500 mt-1">{it.description}</p>
-            )}
-          </button>
-        );
-      })}
+    <div>
+      <div className={`grid gap-3 ${compact ? "sm:grid-cols-3 lg:grid-cols-4" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
+        {items.map((it) => {
+          const active = value === it.key;
+          return (
+            <button
+              key={it.key}
+              onClick={() => handleClick(it.key)}
+              className={`text-left p-4 rounded-2xl border-2 transition-all ${
+                active
+                  ? "border-[#c89a2b] bg-[#fff8ec]"
+                  : "border-[#ece4d4] hover:border-[#c89a2b]/40 bg-white"
+              }`}
+            >
+              <h3 className="font-semibold text-[#1d1d1f] text-sm capitalize">
+                {it.label}
+              </h3>
+              {it.description && (
+                <p className="text-xs text-slate-500 mt-1">{it.description}</p>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Inline explanation directly below the card row (Part 2) */}
+      {infoMap && openItem && infoMap[openItem.key] && (
+        <InfoBox label={openItem.label} data={infoMap[openItem.key]} />
+      )}
+    </div>
+  );
+}
+
+function InfoBox({ label, data }) {
+  return (
+    <div className="mt-3 bg-[#fff8ec] border border-[#f3e3bf] rounded-2xl p-5">
+      <div className="flex items-center gap-2 mb-3">
+        <Info className="w-4 h-4 text-[#c89a2b]" />
+        <span className="text-sm font-bold text-[#1d1d1f] capitalize">{label}</span>
+      </div>
+      <div className="space-y-2 text-sm">
+        <p>
+          <span className="font-semibold text-[#7a5a16]">Best for:</span>{" "}
+          <span className="text-slate-600">{data.bestFor}</span>
+        </p>
+        <p>
+          <span className="font-semibold text-[#7a5a16]">Rexa will ask:</span>{" "}
+          <span className="text-slate-600">{data.willAsk}</span>
+        </p>
+        <p>
+          <span className="font-semibold text-[#7a5a16]">Recommended when:</span>{" "}
+          <span className="text-slate-600">{data.recommendedWhen}</span>
+        </p>
+      </div>
     </div>
   );
 }
@@ -820,6 +1001,17 @@ function SmallPicker({ label, items, value, onChange }) {
 }
 
 function ScorecardModal({ scorecard, onClose }) {
+  // Log exactly what the backend returned so we can see the real data shape.
+  useEffect(() => {
+    console.log("[Scorecard] questionBreakdown:", scorecard?.questionBreakdown);
+  }, [scorecard]);
+
+  // Render every question the backend sends — no slicing. We only drop entries
+  // that aren't genuine questions (e.g. the opening greeting, which has no "?").
+  const questionBreakdown = (scorecard.questionBreakdown || []).filter(
+    (q) => q?.question && q.question.includes("?")
+  );
+
   return (
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-[2rem] max-w-3xl w-full p-8 my-8 max-h-[90vh] overflow-y-auto">
@@ -876,9 +1068,40 @@ function ScorecardModal({ scorecard, onClose }) {
           <ListCard title="Specific skill gaps" tone="orange" items={scorecard.skillGaps} />
         )}
 
-        {(scorecard.improvementPlan || []).length > 0 && (
+        {(scorecard.nextSteps || scorecard.improvementPlan || []).length > 0 && (
           <div className="mt-4">
-            <ListCard title="3-step improvement plan" tone="purple" items={scorecard.improvementPlan} />
+            <ListCard
+              title="Next steps before your next interview"
+              tone="purple"
+              items={scorecard.nextSteps || scorecard.improvementPlan}
+            />
+          </div>
+        )}
+
+        {questionBreakdown.length > 0 && (
+          <div className="mt-4 bg-[#faf8f4] border border-[#ece4d4] rounded-2xl p-5">
+            <h3 className="font-semibold text-[#1d1d1f] mb-3">
+              Question-by-question
+            </h3>
+            <div className="space-y-3">
+              {questionBreakdown.map((q, i) => (
+                <div key={i} className="border-b border-[#ece4d4] last:border-0 pb-3 last:pb-0">
+                  <div className="flex items-start justify-between gap-3 mb-1">
+                    <p className="text-sm font-medium text-[#1d1d1f] flex-1">
+                      Q{i + 1}. {q.question}
+                    </p>
+                    {q.answerQuality && (
+                      <span className={`shrink-0 px-2 py-0.5 rounded-full text-[11px] font-semibold ${qualityTone(q.answerQuality)}`}>
+                        {q.answerQuality}
+                      </span>
+                    )}
+                  </div>
+                  {q.feedback && (
+                    <p className="text-xs text-slate-500">{q.feedback}</p>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -893,9 +1116,21 @@ function ScorecardModal({ scorecard, onClose }) {
 
         {scorecard.readinessScore != null && (
           <div className="mt-4 flex items-center justify-between bg-[#fff8ec] border border-[#f3e3bf] rounded-2xl p-4">
-            <span className="text-sm text-[#7a5a16] font-semibold">
-              Updated interview readiness
-            </span>
+            <div>
+              <span className="text-sm text-[#7a5a16] font-semibold">
+                Updated interview readiness
+              </span>
+              {scorecard.readinessShift != null && scorecard.readinessShift !== 0 && (
+                <span
+                  className={`ml-2 text-sm font-bold ${
+                    scorecard.readinessShift > 0 ? "text-green-600" : "text-red-600"
+                  }`}
+                >
+                  {scorecard.readinessShift > 0 ? "+" : ""}
+                  {scorecard.readinessShift} from this interview
+                </span>
+              )}
+            </div>
             <span className="text-2xl font-bold text-[#c89a2b]">
               {scorecard.readinessScore}/100
             </span>
@@ -911,6 +1146,21 @@ function ScorecardModal({ scorecard, onClose }) {
       </div>
     </div>
   );
+}
+
+function qualityTone(quality) {
+  switch (String(quality).toLowerCase()) {
+    case "excellent":
+      return "bg-[#e7f7ea] text-green-700";
+    case "good":
+      return "bg-[#eaf3ff] text-blue-700";
+    case "average":
+      return "bg-[#fff3df] text-orange-700";
+    case "weak":
+      return "bg-[#fff0ed] text-red-600";
+    default:
+      return "bg-slate-100 text-slate-600";
+  }
 }
 
 function ListCard({ title, tone, items }) {
@@ -963,9 +1213,16 @@ function ReviewModal({ session, onClose }) {
         <div className="space-y-4 mb-6">
           {turns.map((t, i) => (
             <div key={i} className="border border-[#f1ede5] rounded-2xl p-4">
-              <p className="text-xs uppercase tracking-wider text-[#c89a2b] mb-1">
-                Q{i + 1}
-              </p>
+              <div className="flex items-center justify-between gap-3 mb-1">
+                <p className="text-xs uppercase tracking-wider text-[#c89a2b]">
+                  Q{i + 1}
+                </p>
+                {t.answerQuality && (
+                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${qualityTone(t.answerQuality)}`}>
+                    {t.answerQuality}
+                  </span>
+                )}
+              </div>
               <p className="font-semibold text-[#1d1d1f] mb-2">{t.question}</p>
               <p className="text-sm text-slate-600 mb-2 whitespace-pre-wrap">{t.answer}</p>
               {t.feedback && (
