@@ -380,7 +380,21 @@ export const endVoiceCall = async (req: any, res: any) => {
 
     if (session.retellCallId && isVoiceAvailable()) {
       try {
-        const call = await getCall(session.retellCallId);
+        const wait = (ms: number) =>
+          new Promise((resolve) => setTimeout(resolve, ms));
+        let call: any = null;
+
+        for (let attempt = 1; attempt <= 5; attempt++) {
+          call = await getCall(session.retellCallId);
+          retellRawTranscript = call?.transcript_object || call?.transcript || [];
+          const transcriptLength = retellRawTranscript?.length || 0;
+          console.log(
+            `[endVoiceCall] attempt ${attempt} — transcript length: ${transcriptLength}`
+          );
+          if (transcriptLength > 0) break;
+          if (attempt < 5) await wait(3000);
+        }
+
         retellRawTranscript = call?.transcript_object || call?.transcript || [];
         transcript = normaliseTranscript(call);
         durationSeconds =
@@ -525,6 +539,8 @@ async function finalise(sessionId: any, userId: any, res: any) {
 
   const turns = (Array.isArray(session.turns) ? session.turns : []).filter(
     (t: any) => t.answer != null && t.answer !== ""
+  ).filter(
+    (t: any) => t.question && /\?/.test(t.question)
   );
 
   if (turns.length === 0) {

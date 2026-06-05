@@ -261,6 +261,7 @@ export default function Interview() {
       teardownRetell();
       setVoiceState("ended");
       try {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
         const { data } = await axios.post(
           `${API}/api/interviews/${sessionId}/voice-end`,
           {},
@@ -1182,9 +1183,12 @@ function ListCard({ title, tone, items }) {
 
 function ReviewModal({ session, onClose }) {
   const turns = useMemo(() => {
-    if (Array.isArray(session?.turns) && session.turns.length) return session.turns;
+    if (Array.isArray(session?.turns) && session.turns.length) {
+      return session.turns.filter((t) => t.question && /\?/.test(t.question));
+    }
     return (session?.transcript || [])
       .filter((t) => t.answer)
+      .filter((t) => t.question && /\?/.test(t.question))
       .map((t) => ({ question: t.question, answer: t.answer, feedback: t.feedback }));
   }, [session]);
 
