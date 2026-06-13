@@ -1,19 +1,22 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import crypto from "crypto";
 
 // ---------------------------------------------------------------------------
-// Semantic alignment between a candidate's resume and a *dynamic role profile*
-// generated from Role Intelligence (NOT a manually pasted job description).
+// Semantic Evidence Matching (v4).
 //
-// Strategy (degrades gracefully, never throws, never surfaces a hard error):
-//   1. Try Gemini embeddings → cosine similarity.
-//   2. If embeddings are unsupported / fail → ask Gemini to reason a 0-100
-//      alignment score.
-//   3. If reasoning also fails → fall back to the skill-overlap baseline the
-//      caller already computed.
-// The returned object always contains a usable `semanticScore`.
+// The named mechanism: candidate evidence and role-skill requirements are both
+// turned into dense vector embeddings; cosine similarity between them produces a
+// normalized per-skill match score, classified into Strong / Partial / Gap.
+//
+// Two public surfaces:
+//   • computeSemanticAlignment  — whole-resume vs whole-role alignment (a single
+//     0-100 used as one composite-score input). Embeddings → skill-overlap only;
+//     NO LLM-as-judge fallback (that would undercut the named mechanism).
+//   • computeSemanticSkillMatrix — per-skill × per-source cosine similarity, the
+//     core of the v4 engine. This is what drives per-skill readiness.
 // ---------------------------------------------------------------------------
 
-export type SemanticMethod = "embeddings" | "reasoning" | "skill-overlap";
+export type SemanticMethod = "embeddings" | "skill-overlap";
 
 export interface SemanticAlignment {
   semanticScore: number; // 0-100
@@ -30,12 +33,41 @@ export interface SemanticInput {
 }
 
 const EMBEDDING_MODEL = "gemini-embedding-001";
-const REASONING_MODEL = "gemini-1.5-flash";
+
+// Calibrated, adjustable thresholds (operate on the normalized 0-100 similarity
+// score, NOT raw cosine — see similarityToScore). Tunable as evaluation data
+// accumulates; nothing here is a permanent magic constant.
+export const SEMANTIC_THRESHOLDS = {
+  strong: 70, // >= → Strong match
+  partial: 40, // >= → Partial; below → Gap
+};
+
+// How much credit a purely-semantic match (no explicit keyword mention) can earn
+// for a source, relative to a verified structural mention. Keeps semantic from
+// fully substituting explicit evidence while still rescuing vocabulary mismatches.
+export const SEMANTIC_CREDIT = 0.85;
+
+export type MatchTier = "strong" | "partial" | "gap";
+
+export function tierFromScore(score: number): MatchTier {
+  if (score >= SEMANTIC_THRESHOLDS.strong) return "strong";
+  if (score >= SEMANTIC_THRESHOLDS.partial) return "partial";
+  return "gap";
+}
 
 function getGeminiClient() {
   const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_KEY;
   if (!key) throw new Error("GEMINI_API_KEY is not configured");
   return new GoogleGenerativeAI(key);
+}
+
+// In-process embedding cache keyed by content hash, so re-running analysis (e.g.
+// after an interview) never re-embeds unchanged evidence ("store embeddings for
+// reuse"). A persistent per-user cache table is a future optimization.
+const embeddingCache = new Map<string, number[]>();
+
+function hashText(text: string): string {
+  return crypto.createHash("sha1").update(text).digest("hex");
 }
 
 function clampScore(value: unknown, fallback = 0): number {
@@ -60,12 +92,17 @@ function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 async function embed(text: string): Promise<number[]> {
+  const key = hashText(text);
+  const cached = embeddingCache.get(key);
+  if (cached) return cached;
+
   const model = getGeminiClient().getGenerativeModel({ model: EMBEDDING_MODEL });
   const result = await model.embedContent(text);
   const values = result?.embedding?.values;
   if (!Array.isArray(values) || values.length === 0) {
     throw new Error("Embedding response contained no vector");
   }
+  embeddingCache.set(key, values);
   return values;
 }
 
@@ -87,67 +124,126 @@ async function scoreByEmbeddings(input: SemanticInput): Promise<number> {
   return similarityToScore(cosineSimilarity(resumeVec, roleVec));
 }
 
-async function scoreByReasoning(input: SemanticInput): Promise<number> {
-  const model = getGeminiClient().getGenerativeModel({ model: REASONING_MODEL });
-
-  const prompt = `You are an expert technical recruiter. Rate how semantically aligned this candidate's resume is with the target role profile on a scale of 0 to 100.
-
-Consider depth of relevant experience, projects, and technologies — not just keyword overlap.
-
-TARGET ROLE: ${input.normalizedTitle}
-ROLE PROFILE:
-${input.roleProfileText.slice(0, 3000)}
-
-CANDIDATE RESUME:
-${input.resumeText.slice(0, 4000)}
-
-Respond with ONLY a single integer between 0 and 100. No words, no symbols, no explanation.`;
-
-  const response = await model.generateContent(prompt);
-  const raw = response.response.text();
-  const match = raw.match(/\d{1,3}/);
-  if (!match) throw new Error("Reasoning response contained no number");
-  return clampScore(match[0]);
-}
-
 /**
- * Compute the semantic alignment score. Always resolves — never rejects.
- * Logs a single warning when it has to step down to a weaker method.
+ * Whole-resume vs whole-role semantic alignment (0-100). Always resolves.
+ * Embeddings → skill-overlap baseline. No LLM-as-judge step: if embeddings are
+ * unavailable we degrade to the deterministic structural baseline rather than
+ * to an opaque model judgment, keeping the named mechanism honest.
  */
 export async function computeSemanticAlignment(
   input: SemanticInput
 ): Promise<SemanticAlignment> {
   const hasResume = Boolean(input.resumeText && input.resumeText.trim().length > 40);
-
-  // No meaningful resume text → there's nothing to compare. Use the baseline.
   if (!hasResume) {
     return { semanticScore: clampScore(input.skillMatchBaseline), method: "skill-overlap" };
   }
 
-  // 1. Embeddings (preferred)
   try {
     const score = await scoreByEmbeddings(input);
     return { semanticScore: score, method: "embeddings" };
   } catch (embeddingErr) {
     console.warn(
-      "[semanticMatch] embeddings unavailable, falling back to reasoning:",
+      "[semanticMatch] embeddings unavailable, using skill-overlap baseline:",
       (embeddingErr as Error)?.message || embeddingErr
     );
+    return { semanticScore: clampScore(input.skillMatchBaseline), method: "skill-overlap" };
   }
+}
 
-  // 2. Gemini reasoning
+// ---------------------------------------------------------------------------
+// Per-skill Semantic Evidence Matching (the v4 engine core).
+//
+// Embeds each evidence SOURCE's aggregate text once and each ROLE SKILL (with
+// its expanded concepts) once, then computes cosine similarity for every
+// skill × source pair. Returns a normalized 0-100 similarity per pair plus a
+// per-skill Strong/Partial/Gap tier from the skill's peak similarity.
+//
+// Cost is |sources| + |skills| embeddings per run (cached), NOT the product.
+// ---------------------------------------------------------------------------
+
+export interface EvidenceSourceText {
+  key: string; // e.g. "resume" | "project" | "certification" | "roadmap" | "interview"
+  text: string;
+}
+
+export interface RoleSkillConcepts {
+  name: string; // normalized skill name
+  concepts: string[]; // expanded concept list (semantic expansion)
+}
+
+export interface SemanticSkillMatch {
+  method: SemanticMethod;
+  /** simBySkill[skillName][sourceKey] = 0-100 normalized similarity. */
+  simBySkill: Record<string, Record<string, number>>;
+  /** Peak similarity (0-100) across sources, per skill. */
+  peakBySkill: Record<string, number>;
+  /** Strong/Partial/Gap per skill, from peak similarity. */
+  tierBySkill: Record<string, MatchTier>;
+}
+
+function skillEmbeddingText(skill: RoleSkillConcepts): string {
+  const concepts = (skill.concepts || []).filter(Boolean).join(", ");
+  return concepts ? `${skill.name}: ${concepts}` : skill.name;
+}
+
+export async function computeSemanticSkillMatrix(
+  sources: EvidenceSourceText[],
+  skills: RoleSkillConcepts[]
+): Promise<SemanticSkillMatch> {
+  const empty: SemanticSkillMatch = {
+    method: "skill-overlap",
+    simBySkill: {},
+    peakBySkill: {},
+    tierBySkill: {},
+  };
+  if (!skills.length) return empty;
+
+  const usableSources = sources.filter((s) => s.text && s.text.trim().length > 2);
+
   try {
-    const score = await scoreByReasoning(input);
-    return { semanticScore: score, method: "reasoning" };
-  } catch (reasoningErr) {
-    console.warn(
-      "[semanticMatch] reasoning fallback failed, using skill-overlap baseline:",
-      (reasoningErr as Error)?.message || reasoningErr
+    // Embed every source and every skill once (cached by content hash).
+    const sourceVecs = new Map<string, number[]>();
+    await Promise.all(
+      usableSources.map(async (s) => {
+        sourceVecs.set(s.key, await embed(s.text.slice(0, 8000)));
+      })
     );
-  }
 
-  // 3. Skill-overlap baseline (last resort — guaranteed)
-  return { semanticScore: clampScore(input.skillMatchBaseline), method: "skill-overlap" };
+    const skillVecs = new Map<string, number[]>();
+    await Promise.all(
+      skills.map(async (sk) => {
+        skillVecs.set(sk.name, await embed(skillEmbeddingText(sk)));
+      })
+    );
+
+    const simBySkill: Record<string, Record<string, number>> = {};
+    const peakBySkill: Record<string, number> = {};
+    const tierBySkill: Record<string, MatchTier> = {};
+
+    for (const sk of skills) {
+      const skVec = skillVecs.get(sk.name)!;
+      const row: Record<string, number> = {};
+      let peak = 0;
+      for (const s of usableSources) {
+        const sv = sourceVecs.get(s.key);
+        if (!sv) continue;
+        const score = similarityToScore(cosineSimilarity(skVec, sv));
+        row[s.key] = score;
+        if (score > peak) peak = score;
+      }
+      simBySkill[sk.name] = row;
+      peakBySkill[sk.name] = peak;
+      tierBySkill[sk.name] = tierFromScore(peak);
+    }
+
+    return { method: "embeddings", simBySkill, peakBySkill, tierBySkill };
+  } catch (err) {
+    console.warn(
+      "[semanticMatch] per-skill embeddings unavailable, structural-only fallback:",
+      (err as Error)?.message || err
+    );
+    return empty;
+  }
 }
 
 /**

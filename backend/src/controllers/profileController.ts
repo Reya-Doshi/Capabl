@@ -1,5 +1,7 @@
 import prisma from "../config/db.js";
 import { runAnalysis } from "../services/analysisService.js";
+import { extractResumeText } from "../services/resumeService.js";
+import { extractResumeProfile } from "../services/resumeExtractionService.js";
 
 async function loadManualProgress(userId: any) {
   try {
@@ -243,6 +245,27 @@ function buildRecommendations(analysisResult: any, projects: any, githubProjects
   return filtered.slice(0, 6);
 }
 
+export function buildCanonicalAnalysisDto(analysisResult: any) {
+  return {
+    readinessScore: analysisResult.readinessScore,
+    matchScore: analysisResult.matchScore,
+    skillStrengths: analysisResult.skillStrengths || [],
+    skillGaps: analysisResult.skillGaps || [],
+    recommendedSkills: analysisResult.recommendedSkills || [],
+    roadmap: analysisResult.roadmap || [],
+    roadmapStages: analysisResult.roadmapStages || [],
+    confidence: analysisResult.confidence || "Low",
+    evidenceSummary:
+      analysisResult.evidenceSummary ||
+      analysisResult.scoreExplanation?.evidenceSummary ||
+      {},
+    skillProficiency: analysisResult.skillProficiency || [],
+    profileCompleteness: analysisResult.profileCompleteness || 0,
+    scoreExplanation: analysisResult.scoreExplanation || null,
+    profileStatus: analysisResult.profileStatus || null,
+  };
+}
+
 async function persistAnalysis(userId: any, analysisResult: any, hasResume: any) {
   const latestInterview = await prisma.interviewSession.findFirst({
     where: {
@@ -366,8 +389,20 @@ async function persistAnalysis(userId: any, analysisResult: any, hasResume: any)
   );
 
   const aiData = {
+    canonicalAnalysis: buildCanonicalAnalysisDto(analysisResult),
     careerFit: analysisResult.careerFit,
     readinessScore: analysisResult.readinessScore,
+    matchScore: analysisResult.matchScore,
+    profileCompleteness: analysisResult.profileCompleteness,
+    evidenceSummary:
+      analysisResult.evidenceSummary ||
+      analysisResult.scoreExplanation?.evidenceSummary ||
+      {},
+    skillProficiency: analysisResult.skillProficiency || [],
+    roadmapPlan: {
+      weeks: analysisResult.roadmap || [],
+      stages: analysisResult.roadmapStages || [],
+    },
     atsScore: analysisResult.resume.atsScore,
     resumeScore: hasResume ? analysisResult.resume.score : 0,
     githubScore: analysisResult.github.score,
@@ -451,6 +486,166 @@ async function persistAnalysis(userId: any, analysisResult: any, hasResume: any)
   });
 }
 
+// Reconstruct lightweight project evidence ({title, description, technologies})
+// from a persisted AIAnalysis row so re-runs feed the projects evidence source.
+function projectsFromAnalysis(ai: any): any[] {
+  if (!ai) return [];
+  const out: any[] = [];
+  const titles = ai.projectTitles || [];
+  const descriptions = ai.projectDescriptions || [];
+  const technologies = ai.projectTechnologies || [];
+  titles.forEach((title: any, i: number) => {
+    out.push({
+      title,
+      description: descriptions[i] || "",
+      technologies: parseSkills(technologies[i]),
+    });
+  });
+  (ai.savedProjects || []).forEach((raw: any) => {
+    const p = parseSavedProject(raw);
+    if (p) out.push({ title: p.title, description: p.description, technologies: p.technologies });
+  });
+  return out;
+}
+
+// Parse a field that may arrive as a JSON string (FormData) or a real array.
+function parseJsonField(raw: any): any[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  try {
+    const j = JSON.parse(raw);
+    return Array.isArray(j) ? j : [];
+  } catch {
+    return [];
+  }
+}
+
+// Persist confirmed education + certifications + phone from the Review step onto
+// the AIAnalysis row. Only updates an existing row (persistAnalysis creates it
+// first) and only sets fields that were actually provided.
+async function patchConfirmedProfile(userId: any, body: any) {
+  const education = parseJsonField(body.education);
+  const certifications = parseJsonField(body.certifications);
+  const phone = body.phone ? String(body.phone).trim() : null;
+
+  const patch: any = {};
+  if (phone) patch.phone = phone;
+
+  const edu = education[0];
+  if (edu && typeof edu === "object") {
+    if (edu.degree) patch.degree = String(edu.degree);
+    if (edu.field) patch.specialization = String(edu.field);
+    if (edu.institution) patch.collegeName = String(edu.institution);
+    if (edu.startYear) patch.startYear = String(edu.startYear);
+    if (edu.endYear) patch.endYear = String(edu.endYear);
+    if (edu.cgpa) patch.cgpa = String(edu.cgpa);
+  }
+
+  if (certifications.length) {
+    patch.certifications = uniqueStrings(
+      certifications.map((c: any) =>
+        typeof c === "string" ? c : [c?.name, c?.issuer].filter(Boolean).join(" — ")
+      )
+    );
+  }
+
+  // Persist onboarding-confirmed projects so future re-runs (e.g. after an
+  // interview) keep the projects evidence source. Only fill when the analysis
+  // row has no projects yet — never clobber GitHub-derived projects.
+  const projects = parseJsonField(body.projects).filter(
+    (p: any) => p && (p.title || p.description)
+  );
+  if (projects.length) {
+    const existing = await prisma.aIAnalysis.findUnique({
+      where: { userId },
+      select: { projectTitles: true },
+    });
+    if (existing && (existing.projectTitles || []).length === 0) {
+      patch.projectTitles = projects.map((p: any) => p.title || "Untitled project");
+      patch.projectDescriptions = projects.map((p: any) => p.description || "");
+      patch.projectTechnologies = projects.map((p: any) =>
+        uniqueStrings(parseSkills(p.technologies)).join(", ")
+      );
+      patch.projectStatuses = projects.map(() => "In Progress");
+      patch.projectImages = projects.map(() => "/github.jpg");
+      patch.totalProjects = projects.length;
+    }
+  }
+
+  if (Object.keys(patch).length === 0) return;
+
+  try {
+    await prisma.aIAnalysis.update({ where: { userId }, data: patch });
+  } catch (e: any) {
+    console.warn("[patchConfirmedProfile] skipped:", e.message);
+  }
+}
+
+// Build a combined interview transcript from the user's finished sessions, used
+// as the highest-weight evidence source. Accumulating across sessions is what
+// makes confidence rise over repeated interviews (v4 continuous loop).
+export async function loadInterviewText(userId: any): Promise<string> {
+  try {
+    const sessions = await prisma.interviewSession.findMany({
+      where: { userId, status: "finished" },
+      orderBy: { finishedAt: "desc" },
+      take: 5,
+      select: { turns: true, summary: true, strengths: true },
+    });
+    const blocks: string[] = [];
+    for (const s of sessions) {
+      const turns = Array.isArray(s.turns) ? (s.turns as any[]) : [];
+      for (const t of turns) {
+        if (t?.question) blocks.push(`Q: ${t.question}`);
+        if (t?.answer) blocks.push(`A: ${t.answer}`);
+      }
+      if (s.summary) blocks.push(String(s.summary));
+      if (Array.isArray(s.strengths) && s.strengths.length)
+        blocks.push(`Demonstrated strengths: ${s.strengths.join(", ")}`);
+    }
+    return blocks.join("\n").slice(0, 12000);
+  } catch {
+    return "";
+  }
+}
+
+// Canonical "recompute the full readiness pipeline for a user" path. Loads every
+// evidence source (resume, projects, certs, roadmap, interview transcripts),
+// re-runs Semantic Evidence Matching, and persists the result. Called after an
+// interview finishes so demonstrated skills reshape the score — not a flat shift.
+export async function recomputeUserAnalysis(userId: any) {
+  const fullUser: any = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { skills: true, aiAnalysis: true },
+  });
+  if (!fullUser) return null;
+
+  const { manualSkills, weeklyProgress } = await loadManualProgress(userId);
+  const interviewText = await loadInterviewText(userId);
+
+  const analysisResult = await runAnalysis({
+    user: fullUser,
+    skills: fullUser.skills.map((s: any) => s.name),
+    careerGoal: fullUser.careerGoal,
+    resumePath: fullUser.resume,
+    githubUrl: fullUser.github,
+    linkedinUrl: fullUser.linkedin,
+    manualSkills,
+    weeklyProgress,
+    projects: projectsFromAnalysis(fullUser.aiAnalysis),
+    certifications: fullUser.aiAnalysis?.certifications || [],
+    interviewText,
+    cachedRoleIntelligence: {
+      goalSnapshot: fullUser.aiAnalysis?.roleGoalSnapshot,
+      requiredSkills: fullUser.aiAnalysis?.requiredSkills,
+      roleIntelligence: fullUser.aiAnalysis?.roleIntelligence,
+    },
+  });
+
+  await persistAnalysis(userId, analysisResult, Boolean(fullUser.resume));
+  return analysisResult;
+}
+
 export const upsertProfile = async (req: any, res: any) => {
   try {
     const userId = req.user.id;
@@ -462,6 +657,8 @@ export const upsertProfile = async (req: any, res: any) => {
       bio,
       github,
       linkedin,
+      portfolio,
+      phone,
       careerGoal,
     } = req.body;
 
@@ -473,6 +670,8 @@ export const upsertProfile = async (req: any, res: any) => {
       bio: bio || null,
       github: github || null,
       linkedin: linkedin || null,
+      portfolio: portfolio || null,
+      phone: phone || null,
       careerGoal: careerGoal || null,
     };
 
@@ -502,6 +701,23 @@ export const upsertProfile = async (req: any, res: any) => {
 
     const { manualSkills, weeklyProgress } = await loadManualProgress(userId);
 
+    const confirmedCertifications = parseJsonField(req.body.certifications).map(
+      (c: any) => (typeof c === "string" ? c : c?.name)
+    ).filter(Boolean);
+
+    // Project evidence: onboarding-confirmed projects (Review step) merged with
+    // any already saved on the analysis row, so the 0.25 projects weight is real.
+    const confirmedProjects = parseJsonField(req.body.projects)
+      .filter((p: any) => p && (p.title || p.description))
+      .map((p: any) => ({
+        title: p.title || "",
+        description: p.description || "",
+        technologies: parseSkills(p.technologies),
+      }));
+    const projectEvidence = confirmedProjects.length
+      ? confirmedProjects
+      : projectsFromAnalysis(fullUser.aiAnalysis);
+
     const analysisResult = await runAnalysis({
       user: fullUser,
       skills: fullUser.skills.map((s: any) => s.name),
@@ -511,6 +727,11 @@ export const upsertProfile = async (req: any, res: any) => {
       linkedinUrl: fullUser.linkedin,
       manualSkills,
       weeklyProgress,
+      projects: projectEvidence,
+      interviewText: await loadInterviewText(userId),
+      certifications: confirmedCertifications.length
+        ? confirmedCertifications
+        : fullUser.aiAnalysis?.certifications || [],
       cachedRoleIntelligence: {
         goalSnapshot: fullUser.aiAnalysis?.roleGoalSnapshot,
         requiredSkills: fullUser.aiAnalysis?.requiredSkills,
@@ -519,6 +740,11 @@ export const upsertProfile = async (req: any, res: any) => {
     });
 
     await persistAnalysis(userId, analysisResult, Boolean(fullUser.resume));
+
+    // Patch confirmed structured fields from the onboarding "Review" step onto
+    // the AIAnalysis row. Additive — only touches fields the analysis pipeline
+    // doesn't own (education + certifications + phone), and only when provided.
+    await patchConfirmedProfile(userId, req.body);
 
     const userResponse = await prisma.user.findUnique({
       where: { id: userId },
@@ -568,30 +794,8 @@ export const uploadResume = async (req: any, res: any) => {
       },
     });
 
-    const fullUser: any = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { skills: true, aiAnalysis: true },
-    });
-
-    const { manualSkills, weeklyProgress } = await loadManualProgress(userId);
-
-    const analysisResult = await runAnalysis({
-      user: fullUser,
-      skills: fullUser.skills.map((s: any) => s.name),
-      careerGoal: fullUser.careerGoal,
-      resumePath: fullUser.resume,
-      githubUrl: fullUser.github,
-      linkedinUrl: fullUser.linkedin,
-      manualSkills,
-      weeklyProgress,
-      cachedRoleIntelligence: {
-        goalSnapshot: fullUser.aiAnalysis?.roleGoalSnapshot,
-        requiredSkills: fullUser.aiAnalysis?.requiredSkills,
-        roleIntelligence: fullUser.aiAnalysis?.roleIntelligence,
-      },
-    });
-
-    await persistAnalysis(userId, analysisResult, true);
+    // Re-run the full pipeline (includes any past interview evidence).
+    const analysisResult = await recomputeUserAnalysis(userId);
 
     res.status(200).json({
       message: "Resume uploaded and analyzed",
@@ -601,6 +805,43 @@ export const uploadResume = async (req: any, res: any) => {
     });
   } catch (error: any) {
     console.error("uploadResume error:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// ---------------------------------------------------------------------------
+// POST /api/profile/resume/extract  — resume-first onboarding (Step 2 → 3)
+//
+// Saves the uploaded resume and returns a structured ResumeExtraction for the
+// "Review Your Profile" screen. Deliberately does NOT persist profile fields or
+// run the full analysis — that happens only after the user confirms (POST /).
+// ---------------------------------------------------------------------------
+export const extractResume = async (req: any, res: any) => {
+  try {
+    if (!req.file)
+      return res.status(400).json({ message: "No resume file provided" });
+
+    const userId = req.user.id;
+    const relPath = `uploads/resumes/${req.file.filename}`;
+
+    // Persist only the resume pointer so the confirm step doesn't need to
+    // re-upload the file. Profile fields stay untouched until confirmed.
+    await prisma.user.update({
+      where: { id: userId },
+      data: { resume: relPath, resumeName: req.file.originalname },
+    });
+
+    const resumeText = await extractResumeText(relPath);
+    const extraction = await extractResumeProfile(resumeText);
+
+    res.status(200).json({
+      message: "Resume parsed",
+      resume: relPath,
+      resumeName: req.file.originalname,
+      extraction,
+    });
+  } catch (error: any) {
+    console.error("extractResume error:", error);
     res.status(500).json({ message: error.message });
   }
 };

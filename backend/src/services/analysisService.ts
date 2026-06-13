@@ -10,7 +10,11 @@ import {
 import { resourcesForSkill, conceptsForSkill } from "./skillResources.js";
 import {
   computeSemanticAlignment,
+  computeSemanticSkillMatrix,
   buildRoleProfileText,
+  tierFromScore,
+  SEMANTIC_CREDIT,
+  type MatchTier,
 } from "./semanticMatchService.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -126,12 +130,15 @@ interface SkillRecommendation {
   type: string;
 }
 
-// The four weighted evidence sources (each 0-100). These feed the readiness
+// The five weighted evidence sources (each 0-100). These feed the readiness
 // formula directly and are surfaced verbatim so every score is auditable.
+// GitHub/LinkedIn are intentionally absent — they are optional enrichment that
+// only adjusts confidence, never the core readiness score (v4 principle).
 interface EvidenceScores {
-  resume: number;
-  project: number;
-  github: number;
+  interview: number;
+  project: number; // resume projects
+  resume: number; // resume skills/body
+  certification: number;
   roadmap: number;
 }
 
@@ -144,9 +151,11 @@ interface SkillProficiencyEntry {
   currentLevel: ProficiencyLevel;
   targetLevel: ProficiencyLevel;
   confidence: ConfidenceLevel;
-  evidenceScores: EvidenceScores; // raw 0-100 per source
-  evidenceFound: string[]; // e.g. ["Resume", "Projects", "GitHub"]
-  evidenceMissing: string[]; // e.g. ["Roadmap"]
+  matchTier: MatchTier; // Strong / Partial / Gap from semantic similarity
+  semanticScore: number; // 0-100 peak embedding similarity for this skill
+  evidenceScores: EvidenceScores; // raw 0-100 per source (final blended)
+  evidenceFound: string[]; // e.g. ["Resume", "Projects", "Interview"]
+  evidenceMissing: string[]; // e.g. ["Certifications", "GitHub"]
   profileBaselineApplied: boolean; // readiness floored by a self-reported skill
   missingConcepts: string[];
   recommendations: SkillRecommendation[];
@@ -175,9 +184,10 @@ interface ScoreExplanation {
   contributions: SkillContribution[]; // every skill, sorted by points desc
   largestGaps: SkillGapContribution[]; // every gap, sorted by lostPoints desc
   evidenceSummary: {
-    resume: number;
+    interview: number;
     project: number;
-    github: number;
+    resume: number;
+    certification: number;
     roadmap: number;
     profile: number; // self-reported baseline portion
   };
@@ -229,6 +239,8 @@ interface RunAnalysisInput {
   weeklyProgress?: WeeklyDoneEntry[];
   resumeText?: string; // optional pre-extracted text (avoids double extraction)
   projects?: ProjectEvidence[]; // user's projects, used as evidence
+  certifications?: string[]; // certification names/titles, used as evidence
+  interviewText?: string; // interview transcript, high-weight evidence (Phase 3)
   cachedRoleIntelligence?: CachedRoleIntelligence;
 }
 
@@ -236,6 +248,8 @@ interface RunAnalysisResult {
   careerFit: string;
   readinessScore: number;
   matchScore: number;
+  confidence: ConfidenceLevel;
+  evidenceSummary: ScoreExplanation["evidenceSummary"];
   semanticScore: number;
   semanticMethod: string;
   profileCompleteness: number;
@@ -273,6 +287,19 @@ interface RunAnalysisResult {
   recruiterVisibility: number;
   strengthsText: StrengthEntry[];
   aiSuggestions: SuggestionEntry[];
+  profileStatus: {
+    resume: ProfileConnectionStatus;
+    github: ProfileConnectionStatus;
+    linkedin: ProfileConnectionStatus;
+  };
+}
+
+interface ProfileConnectionStatus {
+  key: "resume" | "github" | "linkedin";
+  label: string;
+  status: "connected" | "missing" | "validated";
+  detail: string;
+  url?: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -360,7 +387,7 @@ async function getRoleIntelligence(
     }
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
   const prompt = `
 You are a senior technical recruiter and career coach.
@@ -759,8 +786,17 @@ function buildRoadmap(
 // is the weighted average of per-skill readiness computed here.
 // ---------------------------------------------------------------------------
 
-// readiness = 0.35·resume + 0.25·project + 0.20·github + 0.20·roadmap
-const EVIDENCE_WEIGHTS = { resume: 0.35, project: 0.25, github: 0.2, roadmap: 0.2 };
+// v4 spec-aligned evidence weights (sum to 1.0). Interview performance is the
+// highest-weight signal (demonstrated > claimed). GitHub/LinkedIn are NOT here:
+// they are optional enrichment that only adjusts confidence, never readiness.
+// readiness = 0.35·interview + 0.25·projects + 0.20·resume + 0.12·certs + 0.08·roadmap
+const EVIDENCE_WEIGHTS = {
+  interview: 0.35,
+  project: 0.25,
+  resume: 0.2,
+  certification: 0.12,
+  roadmap: 0.08,
+};
 
 // A skill only *listed* in the profile (self-reported, unverified) floors
 // readiness here so the card reads "Beginner / Low confidence" instead of 0%.
@@ -818,6 +854,27 @@ function projectEvidenceScore(skill: string, projects: ProjectEvidence[]): numbe
   return gradeFromCount(matches, 70, 85, 100);
 }
 
+// Certifications evidence — keyword/variant hits across certification titles.
+function certEvidenceScore(skill: string, certsLower: string): number {
+  if (!certsLower) return 0;
+  const total = skillVariants(skill).reduce(
+    (sum, v) => sum + countOccurrences(certsLower, v),
+    0
+  );
+  return gradeFromCount(total, 70, 85, 100);
+}
+
+// Interview evidence — keyword/variant hits across the interview transcript.
+// Demonstrated discussion of a skill counts higher than a passing resume mention.
+function interviewEvidenceScore(skill: string, interviewLower: string): number {
+  if (!interviewLower) return 0;
+  const total = skillVariants(skill).reduce(
+    (sum, v) => sum + countOccurrences(interviewLower, v),
+    0
+  );
+  return gradeFromCount(total, 75, 90, 100);
+}
+
 function githubEvidenceScore(
   skill: string,
   langCounts: Map<string, number>,
@@ -836,11 +893,84 @@ function githubEvidenceScore(
   return gradeFromCount(repoCount, 60, 80, 100);
 }
 
-// Confidence reflects how many independent sources corroborate the skill.
-function confidenceFromSources(sourceCount: number): ConfidenceLevel {
-  if (sourceCount >= 3) return "High";
-  if (sourceCount === 2) return "Medium";
+// Confidence reflects how many independent sources corroborate the skill, the
+// diversity of those sources, and whether the skill was *demonstrated* in an
+// interview. Optional enrichment (GitHub/LinkedIn) can lift Low→Medium but never
+// gates the score. Mirrors the v4 confidence table (interview ⇒ High).
+function confidenceFor(opts: {
+  coreSourceCount: number; // distinct core sources with evidence
+  interviewPresent: boolean;
+  enrichmentCount: number; // github/linkedin present
+}): ConfidenceLevel {
+  const { coreSourceCount, interviewPresent, enrichmentCount } = opts;
+  if (interviewPresent && coreSourceCount >= 2) return "High";
+  if (coreSourceCount >= 3) return "High";
+  if (coreSourceCount === 2) return "Medium";
+  if (coreSourceCount === 1 && enrichmentCount >= 1) return "Medium";
   return "Low";
+}
+
+function overallConfidence(skills: SkillProficiencyEntry[]): ConfidenceLevel {
+  if (skills.length === 0) return "Low";
+  const score = skills.reduce((sum, skill) => {
+    if (skill.confidence === "High") return sum + 2;
+    if (skill.confidence === "Medium") return sum + 1;
+    return sum;
+  }, 0);
+  const pct = score / (skills.length * 2);
+  if (pct >= 0.67) return "High";
+  if (pct >= 0.34) return "Medium";
+  return "Low";
+}
+
+function buildProfileStatus(params: {
+  resumePath?: string;
+  githubUrl?: string;
+  linkedinUrl?: string;
+  githubProfile: GithubProfile;
+  linkedin: LinkedInScoreResult;
+}) {
+  const resumeConnected = Boolean(params.resumePath);
+  const githubConnected = Boolean(params.githubUrl);
+  const linkedinConnected = Boolean(params.linkedinUrl);
+
+  return {
+    resume: {
+      key: "resume" as const,
+      label: "Resume",
+      status: resumeConnected ? ("validated" as const) : ("missing" as const),
+      detail: resumeConnected ? "Resume on file" : "Resume missing",
+      url: params.resumePath || null,
+    },
+    github: {
+      key: "github" as const,
+      label: "GitHub",
+      status: githubConnected
+        ? params.githubProfile.ok
+          ? ("validated" as const)
+          : ("connected" as const)
+        : ("missing" as const),
+      detail: githubConnected
+        ? params.githubProfile.ok
+          ? `${params.githubProfile.ownRepoCount ?? 0} repos validated`
+          : params.githubProfile.reason || "GitHub URL connected"
+        : "GitHub missing",
+      url: params.githubUrl || null,
+    },
+    linkedin: {
+      key: "linkedin" as const,
+      label: "LinkedIn",
+      status: linkedinConnected
+        ? params.linkedin.ok
+          ? ("validated" as const)
+          : ("connected" as const)
+        : ("missing" as const),
+      detail: linkedinConnected
+        ? params.linkedin.reason || "LinkedIn URL validated"
+        : "LinkedIn missing",
+      url: params.linkedinUrl || null,
+    },
+  };
 }
 
 function levelForReadiness(readiness: number): ProficiencyLevel {
@@ -922,6 +1052,8 @@ export async function runAnalysis({
   weeklyProgress = [],
   resumeText: preExtractedText,
   projects = [],
+  certifications = [],
+  interviewText = "",
   cachedRoleIntelligence,
 }: RunAnalysisInput): Promise<RunAnalysisResult> {
 
@@ -1009,47 +1141,84 @@ export async function runAnalysis({
   const githubScoreResult: GithubScoreResult = scoreGithub(githubProfile, required);
   const linkedinScoreResult: LinkedInScoreResult = scoreLinkedIn(linkedinUrl);
 
-  // ── 8. Explainable, evidence-driven scoring engine ──────────────────────
-  // For every required skill we score four independent evidence sources
-  // (resume, projects, GitHub, roadmap) on 0-100, then:
-  //   readiness = 0.35·resume + 0.25·project + 0.20·github + 0.20·roadmap
+  // ── 8. Semantic Evidence Matching — explainable scoring engine ──────────
+  // For every required skill we score five weighted evidence sources (interview,
+  // projects, resume, certifications, roadmap) on 0-100. Each source score is
+  // the STRONGER of two signals (dual-layer, per spec):
+  //   • structural: explicit keyword/variant mention in that source's text
+  //   • semantic:   cosine similarity between that source's embedding and the
+  //                 skill's concept-expanded embedding
+  //   readiness = 0.35·interview + 0.25·projects + 0.20·resume + 0.12·certs + 0.08·roadmap
+  // GitHub/LinkedIn are NOT scored here — they only enrich confidence below.
   // A skill only self-reported in the profile is floored at PROFILE_BASELINE.
-  // Overall match = Σ (skill weight% × readiness) — a pure weighted average,
-  // with no clamping, no boosts, and no hidden AI-generated score.
   const resumeLower = resumeText.toLowerCase();
+  const certsLower = (certifications || []).join(" \n ").toLowerCase();
+  const interviewLower = (interviewText || "").toLowerCase();
 
+  // GitHub language/topic evidence is retained ONLY for the optional enrichment
+  // signal (confidence + recruiter visibility), never the core readiness score.
   const githubLangCounts = new Map<string, number>();
   for (const lang of githubProfile?.topLanguages || []) {
     const name = normaliseSkill((lang as any)?.name);
     if (name) githubLangCounts.set(name, (lang as any)?.count || 1);
   }
-
-  // Repo topics + per-repo languages let non-primary-language skills (docker,
-  // rest api, …) still pick up GitHub evidence.
   const githubTopics = new Set<string>();
   for (const repo of (githubProfile as any)?.topRepos || []) {
     for (const t of repo?.topics || []) githubTopics.add(normaliseSkill(t));
     for (const l of repo?.languages || []) githubTopics.add(normaliseSkill(l));
   }
+  const githubPresent = Boolean(githubProfile?.ok);
+  const linkedinPresent = Boolean(linkedinUrl);
+  const enrichmentCount = (githubPresent ? 1 : 0) + (linkedinPresent ? 1 : 0);
 
   const weeklyDoneSkills = new Set(
     (weeklyProgress || []).map((w) => normaliseSkill(w.taskKey))
   );
 
+  // ── Step 1+2: embed evidence sources and concept-expanded role skills ────
+  const projectsText = (projects || [])
+    .map((p) => [p.title, p.description, ...(p.technologies || [])].filter(Boolean).join(" "))
+    .join(" \n ");
+  const roadmapText = [...manualSkillList, ...weeklyDoneSkills].join(", ");
+  const evidenceSources = [
+    { key: "interview", text: interviewLower },
+    { key: "project", text: projectsText },
+    { key: "resume", text: resumeText },
+    { key: "certification", text: certsLower },
+    { key: "roadmap", text: roadmapText },
+  ];
+  const semanticSkills = required.map((skill) => ({
+    name: skill,
+    concepts: conceptsForSkill(skill),
+  }));
+  // ── Step 3: per-skill × per-source cosine similarity (Strong/Partial/Gap) ─
+  const semantic = await computeSemanticSkillMatrix(evidenceSources, semanticSkills);
+
+  // Blend a structural score with its source's semantic similarity: a verified
+  // explicit mention wins; otherwise semantic similarity earns partial credit.
+  const blendSource = (skill: string, key: string, structural: number): number => {
+    const sem = semantic.simBySkill[skill]?.[key] ?? 0;
+    return Math.round(Math.max(structural, sem * SEMANTIC_CREDIT));
+  };
+
   const skillProficiency: SkillProficiencyEntry[] = required.map((skill) => {
-    const resume = resumeEvidenceScore(skill, resumeLower);
-    const project = projectEvidenceScore(skill, projects);
-    const github = githubEvidenceScore(skill, githubLangCounts, githubTopics);
+    // ── Step 4: structured extraction (explicit-mention confidence) ────────
+    const interview = blendSource(skill, "interview", interviewEvidenceScore(skill, interviewLower));
+    const project = blendSource(skill, "project", projectEvidenceScore(skill, projects));
+    const resume = blendSource(skill, "resume", resumeEvidenceScore(skill, resumeLower));
+    const certification = blendSource(skill, "certification", certEvidenceScore(skill, certsLower));
     const roadmapDone =
       manualSkillList.some((m) => skillsMatch(m, skill)) ||
       [...weeklyDoneSkills].some((w) => skillsMatch(w, skill));
-    const roadmap = roadmapDone ? 100 : 0;
+    const roadmap = blendSource(skill, "roadmap", roadmapDone ? 100 : 0);
     const profilePresent = profileSkills.some((s) => skillsMatch(s, skill));
 
+    // ── Step 5: evidence-weighted skill readiness ──────────────────────────
     const weightedEvidence =
-      EVIDENCE_WEIGHTS.resume * resume +
+      EVIDENCE_WEIGHTS.interview * interview +
       EVIDENCE_WEIGHTS.project * project +
-      EVIDENCE_WEIGHTS.github * github +
+      EVIDENCE_WEIGHTS.resume * resume +
+      EVIDENCE_WEIGHTS.certification * certification +
       EVIDENCE_WEIGHTS.roadmap * roadmap;
 
     let readinessRaw = weightedEvidence;
@@ -1060,17 +1229,49 @@ export async function runAnalysis({
     }
     const readiness = Math.round(readinessRaw);
 
-    const sources = [
-      { label: "Resume", on: resume > 0 },
+    // Core sources drive readiness + confidence; enrichment + profile are shown
+    // for traceability but never gate the score.
+    const coreSources = [
+      { label: "Interview", on: interview > 0 },
       { label: "Projects", on: project > 0 },
-      { label: "GitHub", on: github > 0 },
+      { label: "Resume", on: resume > 0 },
+      { label: "Certifications", on: certification > 0 },
       { label: "Roadmap", on: roadmap > 0 },
-      { label: "Profile", on: profilePresent },
     ];
-    const evidenceFound = sources.filter((s) => s.on).map((s) => s.label);
-    const evidenceMissing = sources.filter((s) => !s.on).map((s) => s.label);
-    const profileOnly = evidenceFound.length === 1 && profilePresent;
-    const confidence = confidenceFromSources(evidenceFound.length);
+    const coreFound = coreSources.filter((s) => s.on).map((s) => s.label);
+    const coreMissing = coreSources.filter((s) => !s.on).map((s) => s.label);
+
+    const enrichment = [
+      { label: "GitHub", on: githubPresent && githubEvidenceScore(skill, githubLangCounts, githubTopics) > 0 },
+      { label: "LinkedIn", on: linkedinPresent },
+    ];
+    const enrichmentFound = enrichment.filter((s) => s.on).map((s) => s.label);
+    const enrichmentMissing = enrichment.filter((s) => !s.on).map((s) => s.label);
+
+    // Display chips include every source (core + enrichment + profile floor).
+    const evidenceFound = [
+      ...coreFound,
+      ...enrichmentFound,
+      ...(profilePresent ? ["Profile"] : []),
+    ];
+    const evidenceMissing = [...coreMissing, ...enrichmentMissing];
+    const profileOnly = coreFound.length === 0 && profilePresent;
+
+    const interviewPresent = interview > 0;
+    const confidence = confidenceFor({
+      coreSourceCount: coreFound.length,
+      interviewPresent,
+      enrichmentCount,
+    });
+
+    // semanticScore = raw peak embedding similarity (shown for transparency).
+    // matchTier reflects overall evidence COVERAGE — the stronger of semantic
+    // similarity and the best structural source — so a skill with an explicit
+    // resume/project mention reads "Strong", not "Gap" on diluted whole-doc
+    // cosine alone.
+    const semanticScore = semantic.peakBySkill[skill] ?? 0;
+    const peakStructural = Math.max(interview, project, resume, certification, roadmap);
+    const matchTier: MatchTier = tierFromScore(Math.max(semanticScore, peakStructural));
 
     const weight = skillWeights[skill] || 0;
     const contribution = (weight * readiness) / 100;
@@ -1080,7 +1281,7 @@ export async function runAnalysis({
       readiness >= 85 ? 0 : readiness >= 70 ? 1 : readiness >= 45 ? 2 : 3;
     const missingConcepts = conceptsForSkill(skill).slice(0, conceptCount);
     const recommendations: SkillRecommendation[] = resourcesForSkill(skill).slice(0, 2);
-    const reason = buildSkillReason(skill, evidenceFound, evidenceMissing, profileOnly);
+    const reason = buildSkillReason(skill, coreFound, coreMissing, profileOnly);
 
     return {
       name: skill,
@@ -1091,14 +1292,16 @@ export async function runAnalysis({
       currentLevel: levelForReadiness(readiness),
       targetLevel: "Advanced" as ProficiencyLevel,
       confidence,
-      evidenceScores: { resume, project, github, roadmap },
+      matchTier,
+      semanticScore,
+      evidenceScores: { interview, project, resume, certification, roadmap },
       evidenceFound,
       evidenceMissing,
       profileBaselineApplied,
       missingConcepts,
       recommendations,
       reason,
-      known: evidenceFound.length > 0,
+      known: coreFound.length > 0,
     };
   });
 
@@ -1137,42 +1340,53 @@ export async function runAnalysis({
     .sort((a, b) => b.lostPoints - a.lostPoints);
 
   // Aggregate how many points each evidence source contributed to the overall
-  // score. These five numbers sum to the overall match (profile = the floor's
-  // extra credit), making the score fully decomposable.
-  let evResume = 0, evProject = 0, evGithub = 0, evRoadmap = 0, evProfile = 0;
+  // score. These numbers sum to the overall match (profile = the floor's extra
+  // credit), making the score fully decomposable.
+  let evInterview = 0, evProject = 0, evResume = 0, evCert = 0, evRoadmap = 0, evProfile = 0;
   for (const e of skillProficiency) {
     const wf = e.weight / 100;
-    evResume += wf * EVIDENCE_WEIGHTS.resume * e.evidenceScores.resume;
+    evInterview += wf * EVIDENCE_WEIGHTS.interview * e.evidenceScores.interview;
     evProject += wf * EVIDENCE_WEIGHTS.project * e.evidenceScores.project;
-    evGithub += wf * EVIDENCE_WEIGHTS.github * e.evidenceScores.github;
+    evResume += wf * EVIDENCE_WEIGHTS.resume * e.evidenceScores.resume;
+    evCert += wf * EVIDENCE_WEIGHTS.certification * e.evidenceScores.certification;
     evRoadmap += wf * EVIDENCE_WEIGHTS.roadmap * e.evidenceScores.roadmap;
     const weighted =
-      EVIDENCE_WEIGHTS.resume * e.evidenceScores.resume +
+      EVIDENCE_WEIGHTS.interview * e.evidenceScores.interview +
       EVIDENCE_WEIGHTS.project * e.evidenceScores.project +
-      EVIDENCE_WEIGHTS.github * e.evidenceScores.github +
+      EVIDENCE_WEIGHTS.resume * e.evidenceScores.resume +
+      EVIDENCE_WEIGHTS.certification * e.evidenceScores.certification +
       EVIDENCE_WEIGHTS.roadmap * e.evidenceScores.roadmap;
     evProfile += wf * Math.max(0, e.readiness - weighted);
   }
 
+  const semanticEngineNote =
+    semantic.method === "embeddings"
+      ? "Each source score is the stronger of explicit-mention (structural) and embedding cosine-similarity (semantic) evidence."
+      : "Embeddings unavailable — scored from explicit-mention (structural) evidence only.";
+
   const scoreExplanation: ScoreExplanation = {
     overall: matchScore,
     formula:
-      "Overall Match = Σ (role skill weight × skill readiness). Each readiness = 0.35·resume + 0.25·projects + 0.20·GitHub + 0.20·roadmap.",
+      "Overall Match = Σ (role skill weight × skill readiness). Each readiness = 0.35·interview + 0.25·projects + 0.20·resume + 0.12·certifications + 0.08·roadmap. " +
+      semanticEngineNote +
+      " GitHub/LinkedIn enrich confidence only — never the score.",
     contributions,
     largestGaps,
     evidenceSummary: {
-      resume: Math.round(evResume),
+      interview: Math.round(evInterview),
       project: Math.round(evProject),
-      github: Math.round(evGithub),
+      resume: Math.round(evResume),
+      certification: Math.round(evCert),
       roadmap: Math.round(evRoadmap),
       profile: Math.round(evProfile),
     },
   };
+  const evidenceSummary = scoreExplanation.evidenceSummary;
 
   // ── 9. Semantic alignment (resume vs dynamic role profile) ──────────────
   // Compares the resume against a profile *generated from Role Intelligence* —
   // never a manually pasted job description. Degrades gracefully (embeddings →
-  // reasoning → skill-overlap) and never throws.
+  // skill-overlap baseline) and never throws.
   const roleProfileText = buildRoleProfileText({
     normalizedTitle: careerFit,
     requiredSkills: required,
@@ -1190,15 +1404,15 @@ export async function runAnalysis({
   // ── 10. Composite scores ────────────────────────────────────────────────
   const skillCountScore = Math.min(100, allUserSkills.size * 8);
 
+  // GitHub/LinkedIn deliberately excluded — optional enrichment never feeds the
+  // readiness score (their weight is redistributed to evidence-driven signals).
   const readinessScore = Math.round(
-    matchScore * 0.25 +
-    semanticScore * 0.20 +
-    resumeAnalysis.resumeScore * 0.18 +
+    matchScore * 0.30 +
+    semanticScore * 0.22 +
+    resumeAnalysis.resumeScore * 0.20 +
     profileCompleteness * 0.12 +
     skillCountScore * 0.08 +
-    githubScoreResult.score * 0.08 +
-    linkedinScoreResult.score * 0.04 +
-    resumeAnalysis.atsScore * 0.05
+    resumeAnalysis.atsScore * 0.08
   );
 
   const recruiterVisibility = Math.round(
@@ -1206,6 +1420,7 @@ export async function runAnalysis({
     githubScoreResult.score * 0.40 +
     resumeAnalysis.atsScore * 0.20
   );
+  const confidence = overallConfidence(skillProficiency);
 
   // ── 11. Roadmap ─────────────────────────────────────────────────────────
   const { weeks: roadmap, stages: roadmapStages } = buildRoadmap(
@@ -1294,6 +1509,8 @@ export async function runAnalysis({
     careerFit,
     readinessScore,
     matchScore,
+    confidence,
+    evidenceSummary,
     semanticScore,
     semanticMethod,
     profileCompleteness,
@@ -1334,5 +1551,12 @@ export async function runAnalysis({
     recruiterVisibility,
     strengthsText,
     aiSuggestions,
+    profileStatus: buildProfileStatus({
+      resumePath,
+      githubUrl,
+      linkedinUrl,
+      githubProfile,
+      linkedin: linkedinScoreResult,
+    }),
   };
 }

@@ -3,7 +3,7 @@
 // Single source of truth for "everything we know about this candidate" — used
 // to turn a generic interview into a personalised one.
 //
-// We deliberately re-use `runAnalysis` (the same engine the Analyzer / Skill
+// We deliberately re-use `recomputeUserAnalysis` (the same canonical engine the Analyzer / Skill
 // Gap / Roadmap pages consume) so the interviewer sees the SAME picture the
 // rest of the app shows the user. That includes:
 //   - profile + listed skills
@@ -20,28 +20,7 @@
 // -----------------------------------------------------------------------------
 
 import prisma from "../config/db.js";
-import { runAnalysis } from "./analysisService.js";
-
-async function loadManualProgress(userId: any) {
-  try {
-    const [skills, weekly] = await Promise.all([
-      prisma.skillProgress.findMany({
-        where: { userId },
-        select: { skillName: true },
-      }),
-      prisma.weeklyTaskProgress.findMany({
-        where: { userId },
-        select: { week: true, taskKey: true },
-      }),
-    ]);
-    return {
-      manualSkills: skills.map((s: any) => s.skillName),
-      weeklyProgress: weekly,
-    };
-  } catch {
-    return { manualSkills: [], weeklyProgress: [] };
-  }
-}
+import { recomputeUserAnalysis } from "../controllers/profileController.js";
 
 // Build the projects array from whichever AIAnalysis fields the user has
 // populated. We accept either parallel arrays (titles/descs/tech) OR the
@@ -130,23 +109,12 @@ export async function buildCandidateContext(userId: any) {
   });
   if (!user) throw new Error("User not found");
 
-  const { manualSkills, weeklyProgress } = await loadManualProgress(userId);
-
   let analysis: any;
   try {
-    analysis = await runAnalysis({
-      user,
-      skills: user.skills.map((s: any) => s.name),
-      careerGoal: user.careerGoal,
-      resumePath: user.resume,
-      githubUrl: user.github,
-      linkedinUrl: user.linkedin,
-      manualSkills,
-      weeklyProgress,
-    });
+    analysis = await recomputeUserAnalysis(userId);
   } catch (e: any) {
     // Resume parse can fail on weird PDFs — keep going with a minimal context.
-    console.warn("[candidateContext] runAnalysis failed:", e.message);
+    console.warn("[candidateContext] recomputeUserAnalysis failed:", e.message);
     analysis = null;
   }
 

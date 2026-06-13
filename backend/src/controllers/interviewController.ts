@@ -1,5 +1,6 @@
 import prisma from "../config/db.js";
 import { buildCandidateContext } from "../services/candidateContext.js";
+import { recomputeUserAnalysis } from "./profileController.js";
 import {
   getCatalog,
   resolveTypeSelection,
@@ -582,32 +583,8 @@ async function finalise(sessionId: any, userId: any, res: any) {
       : t;
   });
 
-  // Apply the readinessShift to the candidate's overall dashboard readiness
-  // (AIAnalysis.readinessScore). Only touch an existing analysis row so we
-  // never create a partial one. The per-interview snapshot is also stored on
-  // the session below.
-  let dashboardReadiness: number | null = null;
-  try {
-    const ai = await prisma.aIAnalysis.findUnique({
-      where: { userId },
-      select: { readinessScore: true },
-    });
-    if (ai && ai.readinessScore != null && card.readinessShift) {
-      dashboardReadiness = Math.max(
-        0,
-        Math.min(100, ai.readinessScore + card.readinessShift)
-      );
-      await prisma.aIAnalysis.update({
-        where: { userId },
-        data: { readinessScore: dashboardReadiness },
-      });
-    } else if (ai) {
-      dashboardReadiness = ai.readinessScore ?? null;
-    }
-  } catch (e: any) {
-    console.warn("[finalise] readinessShift apply failed:", e.message);
-  }
-
+  // Mark the session finished FIRST so the readiness recompute below picks up
+  // this interview's transcript as evidence.
   const updated = await prisma.interviewSession.update({
     where: { id: sessionId },
     data: {
@@ -630,6 +607,28 @@ async function finalise(sessionId: any, userId: any, res: any) {
       readinessScore: card.readinessScore,
     },
   });
+
+  // Continuous Readiness Loop: re-run the FULL Semantic Evidence Matching
+  // pipeline with the interview transcript folded in as the highest-weight
+  // (0.35) evidence source — readiness now reflects what the candidate
+  // *demonstrated*, not a flat ±shift. Confidence rises as interview evidence
+  // accumulates across sessions. Falls back to the per-interview readinessScore
+  // if the recompute can't run (e.g. no analysis row yet).
+  let dashboardReadiness: number | null = null;
+  try {
+    const recomputed = await recomputeUserAnalysis(userId);
+    if (recomputed) {
+      dashboardReadiness = recomputed.readinessScore;
+    } else {
+      const ai = await prisma.aIAnalysis.findUnique({
+        where: { userId },
+        select: { readinessScore: true },
+      });
+      dashboardReadiness = ai?.readinessScore ?? null;
+    }
+  } catch (e: any) {
+    console.warn("[finalise] readiness recompute failed:", e.message);
+  }
 
   res.json({
     sessionId,

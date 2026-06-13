@@ -223,6 +223,20 @@ export function buildSystemPrompt({
   const totalQuestions: number =
     type.totalQuestions || DEFAULT_QUESTION_BUDGET[type.purpose] || 6;
 
+  // Gap-targeted interviewing (v4 continuous loop): steer the majority of the
+  // question budget at the candidate's detected readiness gaps, in priority
+  // order, so the interview generates evidence on exactly the skills the
+  // readiness engine flagged as weak.
+  const topGaps: string[] = ((ctx as any).skillGaps || []).slice(0, 4);
+  const gapDirective = topGaps.length
+    ? `
+PRIORITY — TARGET THESE READINESS GAPS
+The readiness engine flagged these skills as the candidate's weakest, in priority order: ${topGaps.join(", ")}.
+- Spend the MAJORITY of your ${totalQuestions} questions probing these gap skills, starting with the first.
+- For each, test whether the candidate has actually closed the gap (concepts, hands-on application, trade-offs) — not just surface familiarity.
+- You may still spend 1–2 questions confirming a claimed strength, but gaps come first.`
+    : "";
+
   // Detect if this is a voice call (Retell) or text mode (Gemini)
   const isVoice = type.medium === "phone" || type.medium === "ai";
 
@@ -259,6 +273,7 @@ TYPE-SPECIFIC GUIDANCE
 ${overlays.map((o) => `- ${o}`).join("\n")}
 
 ${contextToPromptBlock(ctx)}
+${gapDirective}
 
 GROUND RULES
 - Ask EXACTLY ONE question per turn. ≤ 60 words per question.
