@@ -62,12 +62,21 @@ function confidenceTone(confidence) {
   return "bg-[#fff0ed] text-red-600";
 }
 
-// The four weighted evidence sources, shown verbatim for traceability.
+// Strong / Partial / Gap tier from Semantic Evidence Matching.
+function tierTone(tier) {
+  if (tier === "strong") return { label: "Strong", cls: "bg-[#e7f7ea] text-green-700" };
+  if (tier === "partial") return { label: "Partial", cls: "bg-[#fff3df] text-[#a47200]" };
+  return { label: "Gap", cls: "bg-[#fff0ed] text-red-600" };
+}
+
+// The five weighted evidence sources, shown verbatim for traceability.
+// (GitHub/LinkedIn are optional enrichment — they affect confidence, not score.)
 const EVIDENCE_SOURCES = [
-  { key: "resume", label: "Resume", weight: "35%" },
+  { key: "interview", label: "Interview", weight: "35%" },
   { key: "project", label: "Projects", weight: "25%" },
-  { key: "github", label: "GitHub", weight: "20%" },
-  { key: "roadmap", label: "Roadmap", weight: "20%" },
+  { key: "resume", label: "Resume", weight: "20%" },
+  { key: "certification", label: "Certs", weight: "12%" },
+  { key: "roadmap", label: "Roadmap", weight: "8%" },
 ];
 
 // A skill card surfaces only learner-facing language and is expandable into a
@@ -87,6 +96,14 @@ const SkillCard = ({ skill }) => {
       <div className="flex items-start justify-between gap-3 mb-3">
         <h3 className="text-lg font-bold text-[#1d1d1f] capitalize">{skill.name}</h3>
         <div className="flex items-center gap-2 shrink-0">
+          {skill.matchTier && (
+            <span
+              className={`px-2.5 py-1 rounded-full text-xs font-bold ${tierTone(skill.matchTier).cls}`}
+              title={`Semantic match: ${skill.semanticScore ?? 0}/100`}
+            >
+              {tierTone(skill.matchTier).label}
+            </span>
+          )}
           <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${confidenceTone(skill.confidence)}`}>
             {skill.confidence}
           </span>
@@ -298,9 +315,10 @@ const WhyScorePanel = ({ explanation, matchScore }) => {
             Evidence summary
           </h3>
           <div className="space-y-2 text-sm">
-            <LeaderRow label="Resume evidence" value={ev.resume ?? 0} positive />
+            <LeaderRow label="Interview evidence" value={ev.interview ?? 0} positive />
             <LeaderRow label="Project evidence" value={ev.project ?? 0} positive />
-            <LeaderRow label="GitHub evidence" value={ev.github ?? 0} positive />
+            <LeaderRow label="Resume evidence" value={ev.resume ?? 0} positive />
+            <LeaderRow label="Certification evidence" value={ev.certification ?? 0} positive />
             <LeaderRow label="Roadmap progress" value={ev.roadmap ?? 0} positive />
             {(ev.profile ?? 0) > 0 && (
               <LeaderRow label="Profile (self-reported)" value={ev.profile} positive />
@@ -549,8 +567,8 @@ export default function SkillGap() {
             Skill Readiness
           </h2>
           <p className="text-slate-500 mb-6">
-            Each readiness = 0.35·resume + 0.25·projects + 0.20·GitHub +
-            0.20·roadmap. Tap a card to see the evidence behind it.
+            Each readiness = 0.35 interview + 0.25 projects + 0.20 resume +
+            0.12 certifications + 0.08 roadmap. Tap a card to see the evidence behind it.
           </p>
 
           {skills.length === 0 ? (

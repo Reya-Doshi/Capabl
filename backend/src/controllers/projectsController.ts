@@ -1,5 +1,6 @@
 import prisma from "../config/db.js";
 import { fetchGithubProfile } from "../services/socialService.js";
+import { recomputeUserAnalysis } from "./profileController.js";
 
 function uniqueStrings(values: any[] = []): string[] {
   return [...new Set(
@@ -870,9 +871,12 @@ export const saveProjectMemory = async (req: any, res: any) => {
       data: payload,
     });
 
+    const analysis = await recomputeUserAnalysis(userId);
+
     res.status(200).json({
       message: "Project memory saved successfully",
       project: nextProject,
+      analysis,
     });
   } catch (error: any) {
     console.error("saveProjectMemory error:", error);

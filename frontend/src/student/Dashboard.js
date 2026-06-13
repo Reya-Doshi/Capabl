@@ -28,6 +28,15 @@ import {
 
 import logout from "../utils/logout";
 import { apiUrl, assetUrl } from "../config/api";
+import ProfileStatus from "../components/ProfileStatus";
+
+const GithubIcon = (props) => (
+  <img src="/github.jpg" alt="GitHub" {...props} />
+);
+
+const LinkedinIcon = (props) => (
+  <img src="/linkedin.jpg" alt="LinkedIn" {...props} />
+);
 
 const SidebarLink = ({ href, icon: Icon, label, active }) => (
   <a
@@ -349,6 +358,26 @@ export default function Dashboard() {
               </p>
             )}
           </div>
+        </div>
+
+        <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 mb-6">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-[#edf3ff] flex items-center justify-center">
+              <User className="w-5 h-5 text-blue-600" />
+            </div>
+            <h2 className="text-xl font-bold text-[#1d1d1f]">
+              Connected Profiles
+            </h2>
+          </div>
+          <ProfileStatus
+            profileStatus={analysis?.profileStatus}
+            userInfo={userInfo}
+            icons={{
+              resume: FileText,
+              github: GithubIcon,
+              linkedin: LinkedinIcon,
+            }}
+          />
         </div>
 
         <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-6 mb-6">

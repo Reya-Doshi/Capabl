@@ -3,6 +3,7 @@ import axios from "axios";
 import toast from "react-hot-toast";
 import logout from "../utils/logout";
 import { apiUrl } from "../config/api";
+import ProfileStatus from "../components/ProfileStatus";
 
 import {
   LayoutDashboard,
@@ -15,7 +16,6 @@ import {
   Bookmark,
   User,
   Settings,
-  Upload,
   CheckCircle2,
   Sparkles,
   Eye,
@@ -157,7 +157,6 @@ export default function Analyzer() {
       : "Getting started";
 
   const ghProfile = analysis?.github?.profile;
-  const liData = analysis?.linkedin;
   const semanticScore = analysis?.semanticScore ?? 0;
   const semanticBand =
     semanticScore >= 75
@@ -252,104 +251,15 @@ export default function Analyzer() {
             These are the inputs your analysis is using right now.
           </p>
 
-          <div className="grid lg:grid-cols-3 gap-5">
-            <div className="border border-[#e8e6e1] rounded-[2rem] p-5">
-              <div className="flex gap-3 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#f5f1ea] flex items-center justify-center">
-                  <FileText className="w-6 h-6 text-[#b89968]" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[#1d1d1f]">Resume</h3>
-                  <p className="text-xs text-slate-500">
-                    {userInfo?.resume ? "Uploaded" : "Not uploaded"}
-                  </p>
-                </div>
-              </div>
-              {userInfo?.resume ? (
-                <div className="flex items-center gap-2 text-green-600 text-sm font-semibold">
-                  <CheckCircle2 className="w-4 h-4" />
-                  {userInfo.resumeName || "Resume on file"}
-                </div>
-              ) : (
-                <a
-                  href="/resume"
-                  className="flex items-center gap-2 text-[#b89968] text-sm font-semibold"
-                >
-                  <Upload className="w-4 h-4" />
-                  Upload resume
-                </a>
-              )}
-            </div>
-
-            <div className="border border-[#e8e6e1] rounded-[2rem] p-5">
-              <div className="flex gap-3 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#f5f5f5] flex items-center justify-center">
-                  <GithubIcon className="w-6 h-6 object-contain" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[#1d1d1f]">GitHub</h3>
-                  <p className="text-xs text-slate-500">
-                    Public API · live data
-                  </p>
-                </div>
-              </div>
-              {userInfo?.github ? (
-                <div className="text-sm break-words">
-                  <a
-                    href={userInfo.github}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    {userInfo.github}
-                  </a>
-                  {ghProfile?.ok ? (
-                    <p className="text-xs text-slate-500 mt-2">
-                      {ghProfile.ownRepoCount} repos · {ghProfile.followers}{" "}
-                      followers · {ghProfile.totalStars} stars
-                    </p>
-                  ) : (
-                    <p className="text-xs text-orange-600 mt-2">
-                      {ghProfile?.reason || "Could not load GitHub data"}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400">No GitHub URL</p>
-              )}
-            </div>
-
-            <div className="border border-[#e8e6e1] rounded-[2rem] p-5">
-              <div className="flex gap-3 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#eef5ff] flex items-center justify-center">
-                  <LinkedinIcon className="w-6 h-6 object-contain" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-[#1d1d1f]">LinkedIn</h3>
-                  <p className="text-xs text-slate-500">URL validation only</p>
-                </div>
-              </div>
-              {userInfo?.linkedin ? (
-                <div className="text-sm break-words">
-                  <a
-                    href={userInfo.linkedin}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    {userInfo.linkedin}
-                  </a>
-                  {liData?.note && (
-                    <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                      {liData.note}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-slate-400">No LinkedIn URL</p>
-              )}
-            </div>
-          </div>
+          <ProfileStatus
+            profileStatus={analysis?.profileStatus}
+            userInfo={userInfo}
+            icons={{
+              resume: FileText,
+              github: GithubIcon,
+              linkedin: LinkedinIcon,
+            }}
+          />
 
           <button
             onClick={reanalyze}

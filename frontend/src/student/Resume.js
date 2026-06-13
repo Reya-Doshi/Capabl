@@ -329,8 +329,12 @@ export default function Resume() {
 
                   <div className="p-4 rounded-2xl border border-[#f1f1f1]">
                     <h3 className="font-semibold text-[#1d1d1f] mb-2">
-                      Missing keywords for {analysis.careerFit}
+                      Resume Missing Keywords for {analysis.careerFit}
                     </h3>
+                    <p className="text-xs text-slate-500 mb-3">
+                      ATS keyword gaps from the resume parser. Semantic readiness gaps
+                      are shown on Dashboard and Skill Gap.
+                    </p>
                     {resume.missingKeywords?.length ? (
                       <div className="flex flex-wrap gap-2">
                         {resume.missingKeywords.map((s) => (
