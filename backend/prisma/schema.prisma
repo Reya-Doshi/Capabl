@@ -8,127 +8,77 @@ datasource db {
 }
 
 model User {
-
-  id              Int      @id @default(autoincrement())
-
-  name            String
-  email           String   @unique
-  password        String
-
-  college         String?
-  age             Int?
-  bio             String?
-
-  github          String?
-  linkedin        String?
-
-  resume          String?
-  resumeName      String?
-  profilePic      String?
-
-  careerGoal      String?
-
-  createdAt       DateTime @default(now())
-
-  skills          Skill[]
-  roadmaps        Roadmap[]
-  achievements    Achievement[]
-
-  aiAnalysis      AIAnalysis?
-
-  skillProgress   SkillProgress[]
-  weeklyProgress  WeeklyTaskProgress[]
-
-  interviews      InterviewSession[]
-
+  id             Int                  @id @default(autoincrement())
+  name           String
+  email          String               @unique
+  password       String
+  createdAt      DateTime             @default(now())
+  age            Int?
+  bio            String?
+  college        String?
+  github         String?
+  linkedin       String?
+  profilePic     String?
+  resume         String?
+  careerGoal     String?
+  resumeName     String?
+  phone          String?
+  portfolio      String?
+  aiAnalysis     AIAnalysis?
+  achievements   Achievement[]
+  interviews     InterviewSession[]
+  roadmaps       Roadmap[]
+  skills         Skill[]
+  skillProgress  SkillProgress[]
+  weeklyProgress WeeklyTaskProgress[]
 }
 
 model InterviewSession {
-
-  id              Int      @id @default(autoincrement())
-
-  // -------------------------------------------------------------------------
-  // Type taxonomy (purpose × role × stage × medium × format)
-  //   purpose: screening | technical | behavioral | situational | case |
-  //            cultural-fit | competency | stress
-  //   role:    coding | portfolio | presentation | working |
-  //            resume-discussion | dsa | standard
-  //   stage:   first | second | final
-  //   medium:  ai | video | phone
-  //   format:  one-on-one | panel | sequential
-  // -------------------------------------------------------------------------
-  purpose         String   @default("technical")
-  role            String   @default("standard")
-  stage           String   @default("first")
-  medium          String   @default("ai")
-  format          String   @default("one-on-one")
-
-  level           String   @default("medium")
-  totalQuestions  Int      @default(6)
-
-  // -------------------------------------------------------------------------
-  // Session state
-  //   status: scheduled | in_progress | finished | abandoned
-  //   mode:   voice (Retell) | text (fallback when no RETELL_API_KEY)
-  // -------------------------------------------------------------------------
-  status          String   @default("scheduled")
-  mode            String   @default("text")
-
-  // Personalisation snapshot — captured at start so re-running analytics is
-  // deterministic even if the user's profile changes later.
-  contextSnapshot Json?
-  agentPrompt     String?
-  careerFit       String?
-  interviewerName String?  @default("Rexa")
-
-  // Retell integration
-  retellCallId    String?  @unique
-  retellAgentId   String?
-  voiceProvider   String?
-
-  // Conversation data
-  //   transcript: raw turns from voice call [{ role, text, ts }]
-  //   turns:      logical Q-A pairs with per-turn evaluation
-  //               [{ question, answer, feedback, dims:{tech,comm,prob,conf,clar,fit} }]
-  transcript      Json?
-  turns           Json?
-
-  // -------------------------------------------------------------------------
-  // Evaluation (6-dimension rubric with weights tech 30 / comm 25 / prob 20 /
-  // conf 10 / clar 10 / fit 5)
-  // -------------------------------------------------------------------------
-  score                Int?
-  technicalScore       Int?
-  communicationScore   Int?
-  problemSolvingScore  Int?
-  confidenceScore      Int?
-  clarityScore         Int?
-  culturalFitScore     Int?
-
-  strengths       String[]
-  weaknesses      String[]
-  skillGaps       String[]
-  advice          String[]
-  improvementPlan String[]
-  summary         String?
-  readinessScore  Int?
-
-  startedAt       DateTime @default(now())
-  finishedAt      DateTime?
-  durationSeconds Int?
-
-  userId          Int
-  user            User     @relation(fields: [userId], references: [id])
+  id                  Int       @id @default(autoincrement())
+  level               String    @default("medium")
+  totalQuestions      Int       @default(6)
+  status              String    @default("scheduled")
+  transcript          Json?
+  score               Int?
+  strengths           String[]
+  weaknesses          String[]
+  advice              String[]
+  summary             String?
+  startedAt           DateTime  @default(now())
+  finishedAt          DateTime?
+  userId              Int
+  agentPrompt         String?
+  careerFit           String?
+  clarityScore        Int?
+  communicationScore  Int?
+  confidenceScore     Int?
+  contextSnapshot     Json?
+  culturalFitScore    Int?
+  durationSeconds     Int?
+  format              String    @default("one-on-one")
+  improvementPlan     String[]
+  interviewerName     String?   @default("Rexa")
+  medium              String    @default("ai")
+  mode                String    @default("text")
+  problemSolvingScore Int?
+  purpose             String    @default("technical")
+  readinessScore      Int?
+  retellAgentId       String?
+  retellCallId        String?   @unique
+  role                String    @default("standard")
+  skillGaps           String[]
+  stage               String    @default("first")
+  technicalScore      Int?
+  turns               Json?
+  voiceProvider       String?
+  user                User      @relation(fields: [userId], references: [id])
 }
 
 model SkillProgress {
-
   id          Int      @id @default(autoincrement())
-
   skillName   String
   source      String?  @default("manual")
   completedAt DateTime @default(now())
-
   userId      Int
   user        User     @relation(fields: [userId], references: [id])
 
@@ -136,13 +86,10 @@ model SkillProgress {
 }
 
 model WeeklyTaskProgress {
-
   id          Int      @id @default(autoincrement())
-
   week        Int
   taskKey     String
   completedAt DateTime @default(now())
-
   userId      Int
   user        User     @relation(fields: [userId], references: [id])
 
@@ -150,139 +97,84 @@ model WeeklyTaskProgress {
 }
 
 model Skill {
-
-  id              Int      @id @default(autoincrement())
-
-  name            String
-
-  userId          Int
-  user            User     @relation(fields: [userId], references: [id])
-
+  id     Int    @id @default(autoincrement())
+  name   String
+  userId Int
+  user   User   @relation(fields: [userId], references: [id])
 }
 
 model Roadmap {
-
-  id              Int      @id @default(autoincrement())
-
-  title           String
-  progress        Int      @default(0)
-
-  description     String?
-  deadline        String?
-
-  userId          Int
-  user            User     @relation(fields: [userId], references: [id])
-
+  id          Int     @id @default(autoincrement())
+  title       String
+  progress    Int     @default(0)
+  userId      Int
+  deadline    String?
+  description String?
+  user        User    @relation(fields: [userId], references: [id])
 }
 
 model Achievement {
-
-  id              Int      @id @default(autoincrement())
-
-  title           String
-  description     String?
-
-  createdAt       DateTime @default(now())
-
-  userId          Int
-  user            User     @relation(fields: [userId], references: [id])
-
+  id          Int      @id @default(autoincrement())
+  title       String
+  userId      Int
+  createdAt   DateTime @default(now())
+  description String?
+  user        User     @relation(fields: [userId], references: [id])
 }
 
 model AIAnalysis {
-
-  id                        Int      @id @default(autoincrement())
-
-  // BASIC INFO
-
-  bio                       String?
-  phone                     String?
-  location                  String?
-
-  // EDUCATION
-
-  degree                    String?
-  specialization            String?
-  collegeName               String?
-
-  startYear                 String?
-  endYear                   String?
-
-  cgpa                      String?
-
-  // AI SCORES
-
-  readinessScore            Int?
-  atsScore                  Int?
-  resumeScore               Int?
-
-  // CAREER FIT
-
-  careerFit                 String?
-  requiredSkills            String[] @default([])
-  roleIntelligence          Json?
-  roleGoalSnapshot          String?
-
-  // ARRAYS
-
-  languages                 String[]
-
-  strengths                 String[]
-  weaknesses                String[]
-
-  missingSkills             String[]
-  extractedSkills           String[]
-
-  aiSuggestions             String[]
-
-  // RECOMMENDATIONS
-
-  recommendedRoles          String[]
-  recommendedCourses        String[]
-  recommendedProjects       String[]
-  recommendedInternships    String[]
-
-  whyRecommendations        String[]
-
-  // EXPERIENCE
-
-  internshipExperience      String[]
-  certifications            String[]
-
-  // PROJECTS
-
-  projectTitles             String[]
-  // PROJECTS
-
-savedProjects             String[]
-projectStatuses           String[]
-projectDescriptions       String[]
-projectTechnologies       String[]
-projectImages             String[]
-
-recommendedProjectTitles  String[]
-recommendedProjectDesc    String[]
-recommendedProjectTags    String[]
-
-totalProjects             Int?
-completedProjects         Int?
-inProgressProjects        Int?
-
-  // SOCIAL ANALYSIS
-
-  githubScore               Int?
-  linkedinScore             Int?
-
-  // FINAL AI SUMMARY
-
-  aiSummary                 String?
-
-  createdAt                 DateTime @default(now())
-
-  // RELATION
-
-  userId                    Int      @unique
-
-  user                      User     @relation(fields: [userId], references: [id])
-
+  id                       Int      @id @default(autoincrement())
+  careerFit                String?
+  userId                   Int      @unique
+  bio                      String?
+  collegeName              String?
+  degree                   String?
+  endYear                  String?
+  location                 String?
+  phone                    String?
+  specialization           String?
+  startYear                String?
+  aiSummary                String?
+  atsScore                 Int?
+  certifications           String[]
+  cgpa                     String?
+  createdAt                DateTime @default(now())
+  githubScore              Int?
+  internshipExperience     String[]
+  linkedinScore            Int?
+  projectTechnologies      String[]
+  projectTitles            String[]
+  recommendedCourses       String[]
+  recommendedInternships   String[]
+  recommendedProjects      String[]
+  recommendedRoles         String[]
+  resumeScore              Int?
+  weaknesses               String[]
+  whyRecommendations       String[]
+  readinessScore           Int?
+  strengths                String[]
+  missingSkills            String[]
+  aiSuggestions            String[]
+  extractedSkills          String[]
+  languages                String[]
+  completedProjects        Int?
+  inProgressProjects       Int?
+  projectDescriptions      String[]
+  projectImages            String[]
+  projectStatuses          String[]
+  recommendedProjectDesc   String[]
+  recommendedProjectTags   String[]
+  recommendedProjectTitles String[]
+  savedProjects            String[]
+  totalProjects            Int?
+  requiredSkills           String[] @default([])
+  roleIntelligence         Json?
+  roleGoalSnapshot         String?
+  matchScore           Int?
+  profileCompleteness  Int?
+  canonicalAnalysis    Json?
+  evidenceSummary      Json?
+  skillProficiency     Json?
+  roadmapPlan          Json?
+  user                     User     @relation(fields: [userId], references: [id])
 }
