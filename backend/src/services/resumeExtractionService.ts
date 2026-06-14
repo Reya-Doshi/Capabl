@@ -2,10 +2,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import {
   EMAIL_RE,
   PHONE_RE,
-  URL_RE,
-  cleanUrl,
-  isUsefulUrl,
   classifyUrls,
+  extractResumeUrls,
 } from "./resumeService.js";
 
 // ---------------------------------------------------------------------------
@@ -83,9 +81,7 @@ export function fallbackExtraction(text: string): ResumeExtraction {
   const email = safe.match(EMAIL_RE)?.[0] || "";
   const phone = safe.match(PHONE_RE)?.[0] || undefined;
 
-  const rawUrls = uniqueStrings(safe.match(URL_RE) || [])
-    .map(cleanUrl)
-    .filter(isUsefulUrl);
+  const rawUrls = extractResumeUrls(safe);
   const { githubUrl, linkedinUrl, portfolioUrl } = classifyUrls(rawUrls);
 
   // First non-empty line that looks like a name (letters/spaces, <= 5 words).

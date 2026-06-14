@@ -100,6 +100,30 @@ export function cleanUrl(u: any) {
   return u.replace(/[),.;:'"]+$/g, "");
 }
 
+// Scheme-less profile URLs that resumes very commonly write without "https://",
+// e.g. "github.com/jane", "www.linkedin.com/in/jane". URL_RE (which requires a
+// scheme) misses these, so we capture them separately and normalise to a full
+// https:// URL. Without this, GitHub/LinkedIn never auto-populate (BUG-010).
+export const BARE_URL_RE =
+  /\b((?:www\.)?(?:github\.com|linkedin\.com|gitlab\.com|behance\.net|dribbble\.com|medium\.com)\/[^\s)<>"']+)/gi;
+
+// Single source of truth for pulling usable links out of resume text: combines
+// scheme-prefixed URLs (URL_RE) with scheme-less profile URLs (BARE_URL_RE),
+// normalises and de-duplicates them.
+export function extractResumeUrls(text: any): string[] {
+  const safe = String(text || "");
+  const out = new Set<string>();
+  for (const m of safe.match(URL_RE) || []) {
+    const u = cleanUrl(m);
+    if (isUsefulUrl(u)) out.add(u);
+  }
+  for (const m of safe.match(BARE_URL_RE) || []) {
+    const u = cleanUrl(`https://${String(m).replace(/^www\./i, "")}`);
+    if (isUsefulUrl(u)) out.add(u);
+  }
+  return [...out];
+}
+
 // Classify a list of resume URLs into the three optional evidence sources.
 // Returns the first match for each; everything that isn't GitHub/LinkedIn is
 // treated as a portfolio/personal site.
@@ -195,9 +219,7 @@ export function analyzeResumeText(text: any, requiredSkills: any) {
     lower.includes(k)
   ).length;
 
-  const rawUrls = Array.from(new Set(text.match(URL_RE) || []))
-    .map(cleanUrl)
-    .filter(isUsefulUrl);
+  const rawUrls = extractResumeUrls(text);
 
   const contact = {
     email: text.match(EMAIL_RE)?.[0] || null,
