@@ -16,10 +16,14 @@ import {
   CheckCircle2,
   LogOut,
   Camera,
+  Pencil,
+  X,
+  Loader2,
 } from "lucide-react";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import axios from "axios";
+import toast from "react-hot-toast";
 import logout from "../utils/logout";
 import { apiUrl, assetUrl } from "../config/api";
 
@@ -28,40 +32,123 @@ export default function Profile() {
   const [userInfo, setUserInfo] = useState(null);
   const [analysis, setAnalysis] = useState(null);
 
+  // Inline profile editor — lets users update college / GitHub / LinkedIn /
+  // portfolio / bio etc. after onboarding without re-running the wizard.
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(null); // { name, careerGoal, college, age, bio, github, linkedin, portfolio, phone }
+  const [formSkills, setFormSkills] = useState([]);
+
+  const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get(apiUrl("/api/analysis"), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUserInfo(data.user);
+      setAnalysis(data.analysis);
+    } catch (error) {
+      console.log(error);
+      if (error.response?.status === 401) logout();
+    }
+  }, []);
+
   useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
-    const fetchProfile = async () => {
+  // Pull the FULL user record (includes phone/portfolio, which the analysis
+  // payload omits) so the editor pre-fills every field accurately.
+  const openEditor = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const { data } = await axios.get(apiUrl("/api/profile"), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const u = data.user || userInfo || {};
+      setForm({
+        name: u.name || "",
+        careerGoal: u.careerGoal || "",
+        college: u.college || "",
+        age: u.age ?? "",
+        bio: u.bio || "",
+        github: u.github || "",
+        linkedin: u.linkedin || "",
+        portfolio: u.portfolio || "",
+        phone: u.phone || "",
+      });
+      setFormSkills((u.skills || []).map((s) => (typeof s === "string" ? s : s?.name)).filter(Boolean));
+      setEditing(true);
+    } catch (error) {
+      console.log(error);
+      if (error.response?.status === 401) logout();
+      else toast.error("Could not load your profile for editing");
+    }
+  };
 
+  const saveEditor = async () => {
+    if (!form) return;
+    try {
+      setSaving(true);
+      const token = localStorage.getItem("token");
+
+      // Send every field the editor owns. upsertProfile nulls any omitted field
+      // and rebuilds skills from req.body.skills, so we resend existing skills
+      // to avoid wiping them.
+      const fd = new FormData();
+      fd.append("name", form.name || "");
+      fd.append("careerGoal", form.careerGoal || "");
+      fd.append("college", form.college || "");
+      fd.append("age", form.age === "" || form.age == null ? "" : String(form.age));
+      fd.append("bio", form.bio || "");
+      fd.append("github", form.github || "");
+      fd.append("linkedin", form.linkedin || "");
+      fd.append("portfolio", form.portfolio || "");
+      fd.append("phone", form.phone || "");
+      fd.append("skills", JSON.stringify(formSkills));
+
+      const { data } = await axios.post(apiUrl("/api/profile"), fd, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      if (data?.analysis) setAnalysis(data.analysis);
+
+      // Keep localStorage userInfo in sync for the rest of the app.
       try {
-
-        const token = localStorage.getItem("token");
-
-        const { data } = await axios.get(
-          apiUrl("/api/analysis"),
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+        const stored = JSON.parse(localStorage.getItem("userInfo") || "null") || {};
+        localStorage.setItem(
+          "userInfo",
+          JSON.stringify({
+            ...stored,
+            name: form.name,
+            college: form.college,
+            careerGoal: form.careerGoal,
+            github: form.github,
+            linkedin: form.linkedin,
+          })
         );
-
-        setUserInfo(data.user);
-        setAnalysis(data.analysis);
-
-      } catch (error) {
-
-        console.log(error);
-        if (error.response?.status === 401) {
-          logout();
-        }
-
+      } catch {
+        /* ignore localStorage issues */
       }
 
-    };
+      // Re-fetch the canonical analysis payload so userInfo.skills stays a
+      // string array (upsertProfile returns skills as objects).
+      await fetchProfile();
 
-    fetchProfile();
-
-  }, []);
+      toast.success("Profile updated");
+      setEditing(false);
+    } catch (error) {
+      console.log(error);
+      toast.error(error.response?.data?.message || "Could not save your profile");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const skills = Array.isArray(userInfo?.skills)
     ? userInfo.skills
@@ -226,7 +313,15 @@ export default function Profile() {
 
   <div className="flex items-center gap-5">
 
+    {/* EDIT PROFILE */}
 
+    <button
+      onClick={openEditor}
+      className="h-12 px-5 rounded-2xl bg-[#1d1d1f] text-white flex items-center gap-2 font-semibold hover:opacity-90 transition-all duration-300"
+    >
+      <Pencil className="w-4 h-4" />
+      Edit Profile
+    </button>
 
     {/* BELL */}
 
@@ -594,8 +689,166 @@ className="w-11 h-11 rounded-full object-cover border border-[#ece7dc] p-2 bg-wh
 
         </div>
 
+        {/* EDIT PROFILE MODAL */}
+
+        {editing && form && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-8">
+            <div className="bg-white w-full max-w-2xl rounded-[2rem] border border-[#e8e6e1] shadow-xl max-h-[90vh] overflow-y-auto">
+
+              <div className="flex items-center justify-between px-7 py-5 border-b border-[#f1f1f1] sticky top-0 bg-white rounded-t-[2rem]">
+                <h2 className="text-xl font-bold text-[#1d1d1f]">Edit Profile</h2>
+                <button
+                  onClick={() => !saving && setEditing(false)}
+                  className="w-10 h-10 rounded-full hover:bg-[#f5f1ea] flex items-center justify-center"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="p-7 space-y-5">
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <Field label="Full Name">
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={(e) => setField("name", e.target.value)}
+                      placeholder="Your full name"
+                      className="w-full bg-transparent outline-none"
+                    />
+                  </Field>
+                  <Field label="Career Goal">
+                    <input
+                      type="text"
+                      value={form.careerGoal}
+                      onChange={(e) => setField("careerGoal", e.target.value)}
+                      placeholder="e.g. Full Stack Developer"
+                      className="w-full bg-transparent outline-none"
+                    />
+                  </Field>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <Field label="College / Institution">
+                    <input
+                      type="text"
+                      value={form.college}
+                      onChange={(e) => setField("college", e.target.value)}
+                      placeholder="Your college"
+                      className="w-full bg-transparent outline-none"
+                    />
+                  </Field>
+                  <Field label="Age">
+                    <input
+                      type="number"
+                      value={form.age}
+                      onChange={(e) => setField("age", e.target.value)}
+                      placeholder="Age"
+                      className="w-full bg-transparent outline-none"
+                    />
+                  </Field>
+                </div>
+
+                <Field label="Bio">
+                  <textarea
+                    value={form.bio}
+                    onChange={(e) => setField("bio", e.target.value)}
+                    placeholder="A short bio"
+                    rows={3}
+                    className="w-full bg-transparent outline-none resize-none"
+                  />
+                </Field>
+
+                <Field label="GitHub">
+                  <input
+                    type="text"
+                    value={form.github}
+                    onChange={(e) => setField("github", e.target.value)}
+                    placeholder="https://github.com/yourusername"
+                    className="w-full bg-transparent outline-none"
+                  />
+                </Field>
+
+                <Field label="LinkedIn">
+                  <input
+                    type="text"
+                    value={form.linkedin}
+                    onChange={(e) => setField("linkedin", e.target.value)}
+                    placeholder="https://linkedin.com/in/yourprofile"
+                    className="w-full bg-transparent outline-none"
+                  />
+                </Field>
+
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <Field label="Portfolio">
+                    <input
+                      type="text"
+                      value={form.portfolio}
+                      onChange={(e) => setField("portfolio", e.target.value)}
+                      placeholder="https://your-portfolio.com"
+                      className="w-full bg-transparent outline-none"
+                    />
+                  </Field>
+                  <Field label="Phone">
+                    <input
+                      type="text"
+                      value={form.phone}
+                      onChange={(e) => setField("phone", e.target.value)}
+                      placeholder="Phone number"
+                      className="w-full bg-transparent outline-none"
+                    />
+                  </Field>
+                </div>
+
+                <p className="text-xs text-slate-400">
+                  Saving re-runs your AI analysis with the updated profile. Your
+                  skills and resume are preserved.
+                </p>
+              </div>
+
+              <div className="flex gap-3 px-7 py-5 border-t border-[#f1f1f1] sticky bottom-0 bg-white rounded-b-[2rem]">
+                <button
+                  onClick={() => setEditing(false)}
+                  disabled={saving}
+                  className="h-12 px-5 rounded-2xl border border-[#e8e6e1] font-semibold hover:bg-[#f5f1ea] disabled:opacity-60"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveEditor}
+                  disabled={saving}
+                  className="flex-1 h-12 rounded-2xl bg-[#1d1d1f] text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Saving &amp; re-analyzing...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
       </main>
 
+    </div>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <div>
+      <label className="text-sm font-semibold text-[#1d1d1f] block mb-2">
+        {label}
+      </label>
+      <div className="min-h-14 border border-[#e8e6e1] rounded-2xl px-4 py-3 bg-[#fafafa]">
+        {children}
+      </div>
     </div>
   );
 }

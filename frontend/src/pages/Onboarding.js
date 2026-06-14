@@ -272,13 +272,14 @@ export default function Onboarding() {
   }
 
   // ── Layout ────────────────────────────────────────────────────────────
-  const missingLinks = {
-    github: !github,
-    linkedin: !linkedin,
-    portfolio: !portfolio,
+  // Which links were auto-detected from the resume — used only to label the
+  // fields ("detected" vs "not found"). The fields themselves are ALWAYS shown
+  // and editable so a saved/extracted URL never becomes invisible (BUG-009).
+  const detectedLinks = {
+    github: Boolean(github),
+    linkedin: Boolean(linkedin),
+    portfolio: Boolean(portfolio),
   };
-  const hasAnyMissingLink =
-    missingLinks.github || missingLinks.linkedin || missingLinks.portfolio;
 
   return (
     <div className="min-h-screen bg-[#f7f5f2] flex items-center justify-center px-4 sm:px-6 py-10 sm:py-12">
@@ -316,13 +317,13 @@ export default function Onboarding() {
             certifications={certifications}
             removeCert={removeCert}
             onBack={() => setStep(1)}
-            onNext={() => setStep(hasAnyMissingLink ? 3 : 4)}
+            onNext={() => setStep(3)}
           />
         )}
 
         {step === 3 && (
           <OptionalLinksStep
-            missingLinks={missingLinks}
+            detectedLinks={detectedLinks}
             github={github}
             setGithub={setGithub}
             linkedin={linkedin}
@@ -339,7 +340,7 @@ export default function Onboarding() {
             careerGoal={careerGoal}
             setCareerGoal={setCareerGoal}
             saving={saving}
-            onBack={() => setStep(hasAnyMissingLink ? 3 : 2)}
+            onBack={() => setStep(3)}
             onSubmit={handleSubmit}
           />
         )}
@@ -786,7 +787,7 @@ function ReviewStep(props) {
 
 function OptionalLinksStep(props) {
   const {
-    missingLinks,
+    detectedLinks,
     github,
     setGithub,
     linkedin,
@@ -797,71 +798,69 @@ function OptionalLinksStep(props) {
     onNext,
   } = props;
 
+  // Labels reflect whether we auto-detected the link, but the fields are ALWAYS
+  // rendered and editable so an extracted/saved URL can never disappear (BUG-009).
+  const label = (detected, found, missing) => (detected ? found : missing);
+
   return (
     <div>
       <div className="text-center mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold text-[#1d1d1f] mb-2">
-          Add Optional Evidence
+          Connect Your Profiles
         </h1>
         <p className="text-slate-500 leading-relaxed">
-          These strengthen your confidence score. Skip anything you don't have —
-          it never lowers your readiness.
+          These strengthen your confidence score. Edit anything we detected, or
+          add what's missing — links never lower your readiness.
         </p>
       </div>
 
       <div className="space-y-5">
-        {missingLinks.github && (
-          <div>
-            <label className="text-sm font-semibold text-[#1d1d1f] block mb-2">
-              GitHub not found — want to connect it?
-            </label>
-            <FieldShell>
-              <img src="/github.jpg" alt="github" className="w-5 h-5" />
-              <input
-                type="text"
-                placeholder="https://github.com/yourusername"
-                value={github}
-                onChange={(e) => setGithub(e.target.value)}
-                className="bg-transparent outline-none flex-1"
-              />
-            </FieldShell>
-          </div>
-        )}
+        <div>
+          <label className="text-sm font-semibold text-[#1d1d1f] block mb-2">
+            {label(detectedLinks.github, "GitHub detected — edit if needed", "GitHub — want to connect it?")}
+          </label>
+          <FieldShell>
+            <img src="/github.jpg" alt="github" className="w-5 h-5" />
+            <input
+              type="text"
+              placeholder="https://github.com/yourusername"
+              value={github}
+              onChange={(e) => setGithub(e.target.value)}
+              className="bg-transparent outline-none flex-1"
+            />
+          </FieldShell>
+        </div>
 
-        {missingLinks.linkedin && (
-          <div>
-            <label className="text-sm font-semibold text-[#1d1d1f] block mb-2">
-              LinkedIn not found — want to connect it?
-            </label>
-            <FieldShell>
-              <img src="/linkedin.jpg" alt="linkedin" className="w-5 h-5" />
-              <input
-                type="text"
-                placeholder="https://linkedin.com/in/yourprofile"
-                value={linkedin}
-                onChange={(e) => setLinkedin(e.target.value)}
-                className="bg-transparent outline-none flex-1"
-              />
-            </FieldShell>
-          </div>
-        )}
+        <div>
+          <label className="text-sm font-semibold text-[#1d1d1f] block mb-2">
+            {label(detectedLinks.linkedin, "LinkedIn detected — edit if needed", "LinkedIn — want to connect it?")}
+          </label>
+          <FieldShell>
+            <img src="/linkedin.jpg" alt="linkedin" className="w-5 h-5" />
+            <input
+              type="text"
+              placeholder="https://linkedin.com/in/yourprofile"
+              value={linkedin}
+              onChange={(e) => setLinkedin(e.target.value)}
+              className="bg-transparent outline-none flex-1"
+            />
+          </FieldShell>
+        </div>
 
-        {missingLinks.portfolio && (
-          <div>
-            <label className="text-sm font-semibold text-[#1d1d1f] block mb-2">
-              Portfolio not found — want to add it?
-            </label>
-            <FieldShell icon={Sparkles}>
-              <input
-                type="text"
-                placeholder="https://your-portfolio.com"
-                value={portfolio}
-                onChange={(e) => setPortfolio(e.target.value)}
-                className="bg-transparent outline-none flex-1"
-              />
-            </FieldShell>
-          </div>
-        )}
+        <div>
+          <label className="text-sm font-semibold text-[#1d1d1f] block mb-2">
+            {label(detectedLinks.portfolio, "Portfolio detected — edit if needed", "Portfolio — want to add it?")}
+          </label>
+          <FieldShell icon={Sparkles}>
+            <input
+              type="text"
+              placeholder="https://your-portfolio.com"
+              value={portfolio}
+              onChange={(e) => setPortfolio(e.target.value)}
+              className="bg-transparent outline-none flex-1"
+            />
+          </FieldShell>
+        </div>
       </div>
 
       <div className="flex gap-3 mt-8">
