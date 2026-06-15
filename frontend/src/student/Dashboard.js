@@ -29,6 +29,10 @@ import {
 import logout from "../utils/logout";
 import { apiUrl, assetUrl } from "../config/api";
 import ProfileStatus from "../components/ProfileStatus";
+import WhatIfSimulator from "./WhatIfSimulator";
+import ConfidenceMeter, { getConfidenceBand } from "../components/ConfidenceMeter";
+import ResponsibleAIPanel from "../components/ResponsibleAIPanel";
+import ReasoningPanel from "../components/ReasoningPanel";
 
 const GithubIcon = (props) => (
   <img src="/github.jpg" alt="GitHub" {...props} />
@@ -57,6 +61,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const [activeView, setActiveView] = useState("overview");
+  const [reasoningMap, setReasoningMap] = useState({});
 
   useEffect(() => {
     const fetchAnalysis = async () => {
@@ -87,6 +93,31 @@ export default function Dashboard() {
 
     fetchAnalysis();
   }, [navigate]);
+
+  // Fetch tradeoff reasoning for recommended skills (non-fatal — cards still
+  // render without it). One batched call, results keyed by lowercased name.
+  useEffect(() => {
+    const skills = analysis?.recommendedSkills;
+    if (!skills?.length) return;
+    const fetchReasonings = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const { data } = await axios.post(
+          apiUrl("/api/recommendations/reasoning"),
+          { targetRole: analysis?.careerFit, items: skills },
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const map = {};
+        (data?.reasonings || []).forEach((r) => {
+          if (r?.name) map[r.name.toLowerCase()] = r.reasoning;
+        });
+        setReasoningMap(map);
+      } catch (e) {
+        // ignore — reasoning is optional enrichment
+      }
+    };
+    fetchReasonings();
+  }, [analysis]);
 
   if (loading) {
     return (
@@ -130,6 +161,18 @@ export default function Dashboard() {
     ? assetUrl(userInfo.resume)
     : null;
 
+  // Derive evidence-source completeness from the persisted evidence summary
+  // (same mapping the backend uses). Drives the confidence meter + band.
+  const es = analysis?.evidenceSummary || {};
+  const dataCompleteness = {
+    interview: (es.interview || 0) > 0,
+    projects: (es.project || 0) > 0,
+    resume: (es.resume || 0) > 0 || !!userInfo?.resume,
+    certs: (es.certification || 0) > 0,
+    roadmap: (es.roadmap || 0) > 0,
+  };
+  const confidenceBand = getConfidenceBand(dataCompleteness);
+
   return (
     <div className="min-h-screen bg-[#f7f5f2] flex">
       <aside className="w-[270px] bg-white border-r border-[#e8e6e1] min-h-screen px-6 py-8 hidden lg:flex flex-col fixed left-0 top-0">
@@ -159,6 +202,10 @@ export default function Dashboard() {
           <SidebarLink href="/recommendations" icon={Bookmark} label="Recommendations" />
           <SidebarLink href="/profile" icon={User} label="Profile" />
           <SidebarLink href="/settings" icon={Settings} label="Settings" />
+        </div>
+
+        <div className="mt-4">
+          <ResponsibleAIPanel />
         </div>
       </aside>
 
@@ -251,16 +298,20 @@ export default function Dashboard() {
               <div className="w-16 h-16 rounded-2xl bg-[#e8f8ef] flex items-center justify-center shrink-0">
                 <Target className="w-8 h-8 text-green-600" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h3 className="text-lg font-semibold text-[#1d1d1f] mb-2">
                   Readiness Score
                 </h3>
                 <h2 className="text-4xl font-bold text-green-600 mb-2">
-                  {analysis?.readinessScore ?? 0}%
+                  {analysis?.readinessScore ?? 0}%{" "}
+                  <span className="text-xl font-semibold text-slate-400">
+                    ± {confidenceBand}
+                  </span>
                 </h2>
                 <p className="text-slate-500 text-sm">
                   Overall career readiness
                 </p>
+                <ConfidenceMeter dataCompleteness={dataCompleteness} />
               </div>
             </div>
           </div>
@@ -302,6 +353,40 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Readiness tabs — Overview vs What-if Simulator (no new route) */}
+        <div className="mb-6">
+          <div className="inline-flex bg-white border border-[#e8e6e1] rounded-2xl p-1 mb-4">
+            <button
+              onClick={() => setActiveView("overview")}
+              className={
+                activeView === "overview"
+                  ? "px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-semibold"
+                  : "px-4 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-[#1d1d1f]"
+              }
+            >
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveView("simulate")}
+              className={
+                activeView === "simulate"
+                  ? "px-4 py-2 rounded-xl bg-[#1d1d1f] text-white text-sm font-semibold flex items-center gap-2"
+                  : "px-4 py-2 rounded-xl text-sm font-medium text-slate-500 hover:text-[#1d1d1f] flex items-center gap-2"
+              }
+            >
+              <Sparkles className="w-4 h-4" /> Simulate
+            </button>
+          </div>
+
+          {activeView === "simulate" && (
+            <WhatIfSimulator
+              targetRole={analysis?.careerFit || userInfo?.careerGoal}
+              skills={analysis?.skillProficiency || []}
+              initialScore={analysis?.matchScore ?? 0}
+            />
+          )}
         </div>
 
         <div className="grid lg:grid-cols-2 gap-5 mb-6">
@@ -394,14 +479,17 @@ export default function Dashboard() {
               {analysis.recommendedSkills.map((s) => (
                 <div
                   key={s}
-                  className="border border-[#e8e6e1] rounded-2xl px-4 py-3 flex items-center gap-3"
+                  className="border border-[#e8e6e1] rounded-2xl px-4 py-3"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-[#f5f1ea] flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-[#b89968]" />
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[#f5f1ea] flex items-center justify-center">
+                      <Sparkles className="w-4 h-4 text-[#b89968]" />
+                    </div>
+                    <span className="font-medium text-[#1d1d1f] capitalize">
+                      {s}
+                    </span>
                   </div>
-                  <span className="font-medium text-[#1d1d1f] capitalize">
-                    {s}
-                  </span>
+                  <ReasoningPanel reasoning={reasoningMap[String(s).toLowerCase()]} />
                 </div>
               ))}
             </div>
