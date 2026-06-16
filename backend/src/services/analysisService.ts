@@ -1077,7 +1077,12 @@ export async function runAnalysis({
   );
 
   const required = roleIntelligence.requiredSkills.map(normaliseSkill);
-  const careerFit = roleIntelligence.normalizedTitle;
+  // Single source of truth for the displayed target role: the goal the user
+  // actually selected. Only fall back to Gemini's normalized title when no goal
+  // is set, so every page (Dashboard/Roadmap/Skill Gap/Analyzer) shows exactly
+  // what Onboarding/Resume show instead of a renamed or defaulted role.
+  const careerFit =
+    careerGoal || user?.careerGoal || roleIntelligence.normalizedTitle;
 
   // ── 3. Analyse resume against dynamic required skills ──────────────────
   let resumeAnalysis: ResumeAnalysis = {
@@ -1310,12 +1315,16 @@ export async function runAnalysis({
     skillProficiency.reduce((sum, e) => sum + (e.weight * e.readiness) / 100, 0)
   );
 
-  // Strengths/gaps derived from readiness; gaps ordered by points lost.
+  // "Skills you have" vs "missing" reflect actual detected evidence (resume,
+  // projects, interview, certs, roadmap) via `known`, not an unreachable
+  // readiness≥60 bar — a resume-only skill maxes ~20 readiness and would
+  // otherwise never count, leaving the counts stuck at 0. have + missing now
+  // always equals the required-skill total. Gaps stay ordered by points lost.
   const strengths = skillProficiency
-    .filter((e) => e.readiness >= 60)
+    .filter((e) => e.known)
     .map((e) => e.name);
   const gaps = skillProficiency
-    .filter((e) => e.readiness < 60)
+    .filter((e) => !e.known)
     .sort((a, b) => b.lostPoints - a.lostPoints)
     .map((e) => e.name);
 
