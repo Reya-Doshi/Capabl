@@ -11,7 +11,6 @@ import {
   CheckCircle2,
   Video,
   FolderKanban,
-  Bookmark,
   User,
   Settings,
   Upload,
@@ -157,8 +156,7 @@ export default function Resume() {
           <SidebarLink href="/resume" icon={FileText} label="Resume" active />
           <SidebarLink href="/interview" icon={Video} label="Mock Interview" />
           <SidebarLink href="/projects" icon={FolderKanban} label="Projects" />
-          <SidebarLink href="/recommendations" icon={Bookmark} label="Recommendations" />
-          <SidebarLink href="/profile" icon={User} label="Profile" />
+                    <SidebarLink href="/profile" icon={User} label="Profile" />
           <SidebarLink href="/settings" icon={Settings} label="Settings" />
         </div>
       </aside>
@@ -489,6 +487,27 @@ export default function Resume() {
               <div className="p-6">
                 {hasResume ? (
                   <>
+                    {resumeUrl && /\.pdf(\?|$)/i.test(userInfo?.resume || "") && (
+                      <object
+                        data={resumeUrl}
+                        type="application/pdf"
+                        className="w-full h-[460px] rounded-xl border border-[#e8e6e1] mb-6 bg-[#faf8f4]"
+                        aria-label="Resume preview"
+                      >
+                        <div className="text-center text-sm text-slate-500 py-6">
+                          Preview can't be shown inline here.{" "}
+                          <a
+                            href={resumeUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[#c89a2b] font-semibold underline"
+                          >
+                            Open your resume in a new tab
+                          </a>
+                          .
+                        </div>
+                      </object>
+                    )}
                     <h1 className="text-2xl font-bold text-[#1d1d1f] mb-3">
                       {userInfo?.name}
                     </h1>
