@@ -15,6 +15,7 @@ import {
   evaluateTurn,
   generateScorecard,
   generateRecommendation,
+  EvaluationUnavailableError,
 } from "../services/interviewEngine.js";
 
 // Combine the selected purpose + role flavor into one human label, e.g.
@@ -567,7 +568,23 @@ async function finalise(sessionId: any, userId: any, res: any) {
     totalQuestions: session.totalQuestions,
   };
 
-  const card = await generateScorecard({ candidateContext, type }, turns);
+  let card;
+  try {
+    card = await generateScorecard({ candidateContext, type }, turns);
+  } catch (e) {
+    // AI scoring failed (e.g. Gemini 429 / overload). Do NOT fabricate a
+    // neutral 70/100 — leave the session unscored and re-evaluable, and tell
+    // the client so it can offer a retry instead of a misleading scorecard.
+    if (e instanceof EvaluationUnavailableError) {
+      return res.json({
+        sessionId,
+        status: "evaluation_unavailable",
+        message:
+          "Your interview was recorded, but AI scoring is temporarily unavailable due to high service load. Your answers are saved — please retry scoring in a moment.",
+      });
+    }
+    throw e;
+  }
 
   // Fold the per-question breakdown (answerQuality + one-line feedback) back
   // into the stored turns so the Past-interview review shows it. Additive —

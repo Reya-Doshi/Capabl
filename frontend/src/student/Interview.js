@@ -11,7 +11,6 @@ import {
   FileText,
   Video,
   FolderKanban,
-  Bookmark,
   User,
   Settings,
   PlayCircle,
@@ -27,6 +26,8 @@ import {
   Zap,
   Volume2,
   Info,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 
 import logout from "../utils/logout";
@@ -271,6 +272,10 @@ export default function Interview() {
           setScorecard(data);
           setView("scorecard");
           fetchMeta();
+        } else if (data.status === "evaluation_unavailable") {
+          // Recorded but unscored — show the retry card, not a fake scorecard.
+          setScorecard(data);
+          setView("scorecard");
         } else {
           toast.error(data.message || "Call ended without enough content");
           setView("home");
@@ -438,7 +443,8 @@ export default function Interview() {
         );
         setScorecard(card);
         setView("scorecard");
-        fetchMeta();
+        // Only refresh history/meta once a real scored card exists.
+        if (card.status !== "evaluation_unavailable") fetchMeta();
       } else {
         textareaRef.current?.focus();
       }
@@ -512,6 +518,28 @@ export default function Interview() {
     setScorecard(null);
     setSession(null);
     setView("home");
+  };
+
+  // Re-run AI scoring for a session whose evaluation was temporarily
+  // unavailable (e.g. a Gemini 429). Answers are already saved server-side, so
+  // /finish simply re-evaluates the same transcript.
+  const [retrying, setRetrying] = useState(false);
+  const retryScoring = async (sessionId) => {
+    if (!sessionId) return;
+    try {
+      setRetrying(true);
+      const { data } = await axios.post(
+        `${API}/api/interviews/${sessionId}/finish`,
+        {},
+        { headers: authHeaders() }
+      );
+      setScorecard(data);
+      if (data.status !== "evaluation_unavailable") fetchMeta();
+    } catch (e) {
+      toast.error(e.response?.data?.message || e.message);
+    } finally {
+      setRetrying(false);
+    }
   };
 
   if (loading) {
@@ -682,8 +710,7 @@ export default function Interview() {
           <SidebarLink href="/resume" icon={FileText} label="Resume" />
           <SidebarLink href="/interview" icon={Video} label="AI Interview" active />
           <SidebarLink href="/projects" icon={FolderKanban} label="Projects" />
-          <SidebarLink href="/recommendations" icon={Bookmark} label="Recommendations" />
-          <SidebarLink href="/profile" icon={User} label="Profile" />
+                    <SidebarLink href="/profile" icon={User} label="Profile" />
           <SidebarLink href="/settings" icon={Settings} label="Settings" />
         </div>
         <button
@@ -873,7 +900,12 @@ export default function Interview() {
 
       {/* Scorecard modal */}
       {view === "scorecard" && scorecard && (
-        <ScorecardModal scorecard={scorecard} onClose={closeScorecard} />
+        <ScorecardModal
+          scorecard={scorecard}
+          onClose={closeScorecard}
+          onRetry={retryScoring}
+          retrying={retrying}
+        />
       )}
 
       {/* Review modal */}
@@ -1001,11 +1033,63 @@ function SmallPicker({ label, items, value, onChange }) {
   );
 }
 
-function ScorecardModal({ scorecard, onClose }) {
+function ScorecardModal({ scorecard, onClose, onRetry, retrying }) {
   // Log exactly what the backend returned so we can see the real data shape.
   useEffect(() => {
     console.log("[Scorecard] questionBreakdown:", scorecard?.questionBreakdown);
   }, [scorecard]);
+
+  // Evaluation unavailable (e.g. Gemini 429). Surface an honest "couldn't score
+  // yet" state with a retry — never a fabricated 70/100 scorecard.
+  if (scorecard.status === "evaluation_unavailable") {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4 overflow-y-auto">
+        <div className="bg-white rounded-[2rem] max-w-md w-full p-8 my-8 text-center">
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="w-10 h-10 rounded-full hover:bg-slate-100 flex items-center justify-center"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-5">
+            <AlertTriangle className="w-8 h-8 text-amber-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-[#1d1d1f] mb-3">
+            Evaluation unavailable
+          </h2>
+          <p className="text-slate-600 mb-6">
+            {scorecard.message ||
+              "AI scoring is temporarily unavailable due to high service load. Your answers are saved — please retry in a moment."}
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 h-12 rounded-2xl border border-[#e8e6e1] text-[#1d1d1f] font-semibold hover:bg-[#f5f1ea] transition-all"
+            >
+              Close
+            </button>
+            <button
+              onClick={() => onRetry?.(scorecard.sessionId)}
+              disabled={retrying}
+              className="flex-1 h-12 rounded-2xl bg-[#1d1d1f] text-white font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {retrying ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Retrying…
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="w-4 h-4" /> Retry scoring
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Render every question the backend sends — no slicing. We only drop entries
   // that aren't genuine questions (e.g. the opening greeting, which has no "?").

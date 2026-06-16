@@ -458,35 +458,15 @@ Output JSON only:
 // FINAL SCORECARD
 // ---------------------------------------------------------------------------
 
-// Default scorecard returned when Gemini is unavailable. Shape matches what
-// finalise() expects so the interview can still be marked complete.
-function defaultScorecard(): Scorecard {
-  return {
-    scores: {
-      technical: 70,
-      communication: 70,
-      problemSolving: 70,
-      confidence: 70,
-      clarity: 70,
-      culturalFit: 70,
-    },
-    overall: 70,
-    summary:
-      "Interview completed successfully. Detailed AI analysis unavailable due to temporary service load.",
-    strengths: ["Interview completed"],
-    weaknesses: ["AI evaluation temporarily unavailable"],
-    skillGaps: [],
-    improvementPlan: [],
-    advice: [],
-    nextAdaptiveQuestion: null,
-    readinessScore: 70,
-    verdict:
-      "Interview completed successfully. Detailed AI analysis unavailable due to temporary service load.",
-    improvements: ["AI evaluation temporarily unavailable"],
-    questionBreakdown: [],
-    nextSteps: [],
-    readinessShift: 0,
-  };
+// Thrown when the AI scorecard cannot be produced (e.g. Gemini 429 / overload,
+// or unparseable output after a repair attempt). The caller must surface this
+// as "evaluation unavailable" and let the user retry — we never fabricate a
+// neutral 70/100 scorecard, which misleads the candidate about their result.
+export class EvaluationUnavailableError extends Error {
+  constructor(message = "AI evaluation temporarily unavailable") {
+    super(message);
+    this.name = "EvaluationUnavailableError";
+  }
 }
 
 // Retry a Gemini call up to 3 times with exponential backoff (1s → 2s → 4s).
@@ -533,41 +513,46 @@ export async function generateScorecard(
     const prompt = `You are an expert technical recruiter evaluating a mock interview. The candidate was interviewing for ${careerFit} roles at ${type.level} difficulty. The interview type was ${interviewPurpose}.
 Here is the full interview transcript:
 ${transcript}
-Evaluate strictly and honestly. Do not be encouraging or generic. Be specific to what was actually said.
+Evaluate honestly, fairly, and constructively. Be specific to what was actually said and cite real moments from the transcript. Frame every weakness as a concrete, actionable growth area — never as a personal judgment. Do NOT use harsh, dismissive, or demoralizing language (avoid phrasings like "profound lack of", "failure", "incompetent", "no understanding"); describe gaps in terms of what the candidate should build next.
 Return a JSON object with exactly these fields:
 scores: object containing technicalDepth out of 10, communication out of 10, problemSolving out of 10, confidence out of 10, clarity out of 10, cultureFit out of 10
 overallScore: weighted average — technicalDepth times 0.30 plus communication times 0.25 plus problemSolving times 0.20 plus confidence times 0.10 plus clarity times 0.10 plus cultureFit times 0.05 — rounded to one decimal
-verdict: one sentence honest summary of the candidate's overall performance
+verdict: one honest but encouraging sentence summarizing the candidate's overall performance and their single most important next step — constructive in tone, never harsh or dismissive
 strengths: array of exactly 3 strings — specific things the candidate did well with direct reference to what they said
-improvements: array of exactly 3 strings — specific gaps with direct reference to weak answers
+improvements: array of exactly 3 strings — specific, actionable growth areas phrased constructively, each tied to a concrete moment in the transcript
 questionBreakdown: array of objects, one per question, each containing question as string, answerQuality as Excellent or Good or Average or Weak, and feedback as one sentence. Only include turns in questionBreakdown where Rexa asked a genuine interview question. Do not include the opening greeting.
 readinessShift: a number between minus 5 and plus 5 representing how much this interview performance should shift the candidate's overall Capabl readiness score
 nextSteps: array of exactly 2 strings — specific actionable things the candidate should do before their next interview based on their weak areas
 Return only valid JSON. No markdown. No explanation outside the JSON.`;
 
     const result = await callGeminiWithRetry(() => model.generateContent(prompt));
-    const raw = result.response.text().trim();
-    const parsed = parseJsonLoose(raw) as RawScorecard | null;
+    let raw = result.response.text().trim();
+    let parsed = parseJsonLoose(raw) as RawScorecard | null;
 
+    // If the model wrapped its answer in prose/markdown we couldn't parse, ask
+    // it once more to reformat the SAME content into pure JSON. We never render
+    // the raw model output to the user.
     if (!parsed) {
-      return {
-        ...defaultScorecard(),
-        scores: zeroScores(),
-        overall: 0,
-        summary: "Could not parse evaluation. " + raw.slice(0, 200),
-        verdict: "Could not parse evaluation. " + raw.slice(0, 200),
-        strengths: [],
-        weaknesses: [],
-        improvements: [],
-        skillGaps: [],
-        improvementPlan: [],
-        advice: [],
-        nextSteps: [],
-        questionBreakdown: [],
-        nextAdaptiveQuestion: null,
-        readinessScore: 0,
-        readinessShift: 0,
-      };
+      try {
+        const repair = await callGeminiWithRetry(() =>
+          model.generateContent(
+            `Convert the following interview evaluation into a single valid JSON object with exactly these keys: scores (object with technicalDepth, communication, problemSolving, confidence, clarity, cultureFit — each a number out of 10), overallScore, verdict, strengths, improvements, questionBreakdown, readinessShift, nextSteps. Return ONLY the JSON — no markdown, no code fences, no commentary.\n\n${raw}`
+          )
+        );
+        raw = repair.response.text().trim();
+        parsed = parseJsonLoose(raw) as RawScorecard | null;
+      } catch (e) {
+        console.error("Scorecard JSON repair call failed:", e);
+      }
+    }
+
+    // Still unparseable after a repair attempt. Fall back to a graceful, neutral
+    // scorecard rather than surfacing Gemini's raw output or a 0/100 error.
+    if (!parsed) {
+      console.error("Could not parse scorecard evaluation after repair attempt.");
+      throw new EvaluationUnavailableError(
+        "Could not parse AI evaluation after repair attempt."
+      );
     }
 
     // The new prompt scores each dimension out of 10. We scale to the 0-100
@@ -596,7 +581,7 @@ Return only valid JSON. No markdown. No explanation outside the JSON.`;
           10
       ) / 10;
 
-    const verdict = String(parsed.verdict || parsed.summary || "");
+    const verdict = sanitizeVerdict(String(parsed.verdict || parsed.summary || ""));
     const improvements = arr(parsed.improvements).length
       ? arr(parsed.improvements)
       : arr(parsed.weaknesses);
@@ -643,8 +628,11 @@ Return only valid JSON. No markdown. No explanation outside the JSON.`;
       readinessShift,
     };
   } catch (error) {
-    console.error("Gemini overloaded:", error);
-    return defaultScorecard();
+    // Re-throw our own signal untouched; wrap any other failure (429, network,
+    // overload) as an unavailable evaluation so the caller can offer a retry.
+    if (error instanceof EvaluationUnavailableError) throw error;
+    console.error("Scorecard generation failed:", error);
+    throw new EvaluationUnavailableError();
   }
 }
 
@@ -656,6 +644,23 @@ function combinedPurposeLabelFor(purposeKey: string, roleKey: string): string {
   const roleLabel = ROLE_MAP[roleKey]?.label || "";
   if (!roleLabel) return purposeLabel;
   return `${purposeLabel.replace(/\s*Interview$/i, "").trim()} ${roleLabel}`.trim();
+}
+
+// Responsible-AI safety net: soften any harsh, demoralizing phrasing the model
+// may still produce so the candidate-facing verdict stays constructive. The
+// prompt already asks for constructive feedback — this only rewrites a small,
+// targeted set of clearly damaging phrases and leaves normal sentences intact.
+function sanitizeVerdict(text: string): string {
+  if (!text) return text;
+  const replacements: [RegExp, string][] = [
+    [/profound(ly)?\s+lack(s|ing|ed)?(\s+of)?/gi, "has room to grow in"],
+    [/\b(complete|total|severe|utter)(ly)?\s+(lack|absence|failure)\b/gi, "a clear area to strengthen"],
+    [/\b(incompeten|hopeless|terrible|awful|abysmal|dismal|pathetic|woeful)\w*/gi, "still developing"],
+    [/\bno\s+(real\s+)?understanding\b/gi, "a limited understanding"],
+  ];
+  let out = text;
+  for (const [re, to] of replacements) out = out.replace(re, to);
+  return out.trim();
 }
 
 function clampShift(n: unknown): number {
