@@ -9,7 +9,6 @@ import {
   FileText,
   Video,
   FolderKanban,
-  Bookmark,
   User,
   Settings,
   Bell,
@@ -422,7 +421,6 @@ export default function SkillGap() {
           <SidebarLink href="/resume" icon={FileText} label="Resume" />
           <SidebarLink href="/interview" icon={Video} label="Mock Interview" />
           <SidebarLink href="/projects" icon={FolderKanban} label="Projects" />
-          <SidebarLink href="/recommendations" icon={Bookmark} label="Recommendations" />
           <SidebarLink href="/profile" icon={User} label="Profile" />
           <SidebarLink href="/settings" icon={Settings} label="Settings" />
         </div>

@@ -10,7 +10,6 @@ import {
   FileText,
   Video,
   FolderKanban,
-  Bookmark,
   User,
   Settings,
   TrendingUp,
@@ -146,10 +145,20 @@ export default function RoadMap() {
   const weeks = analysis?.roadmap || [];
 
   const completedCount = stages.filter((s) => s.status === "completed").length;
-  const overallProgress = stages.length
-    ? Math.round(
-        stages.reduce((acc, s) => acc + (s.progress || 0), 0) / stages.length
-      )
+
+  // Overall progress = actually-completed skills across ALL stages, not an
+  // average of per-stage percentages (which let 0 completed skills read 87%).
+  const totalSkills = stages.reduce(
+    (acc, s) => acc + (s.total ?? (s.skills?.length || 0)),
+    0
+  );
+  const knownSkills = stages.reduce(
+    (acc, s) =>
+      acc + (s.knownCount ?? (s.skills?.filter((k) => k.known).length || 0)),
+    0
+  );
+  const overallProgress = totalSkills
+    ? Math.round((knownSkills / totalSkills) * 100)
     : 0;
 
   const activeStageIndex = stages.findIndex((s) => s.status === "active");
@@ -159,7 +168,16 @@ export default function RoadMap() {
   const incompleteWeeks = weeks.filter((w) =>
     (w.tasks || []).some((t) => !t.done)
   ).length;
-  const estimatedMonths = (incompleteWeeks / 4).toFixed(1);
+
+  // Human-readable remaining time: days/weeks for short spans, months only once
+  // it's actually months — avoids odd readings like "0.3 mo".
+  const remainingTimeLabel = (() => {
+    if (incompleteWeeks <= 0) return "Done";
+    if (incompleteWeeks === 1) return "1 week";
+    if (incompleteWeeks < 8) return `${incompleteWeeks} weeks`;
+    const months = incompleteWeeks / 4;
+    return `${months % 1 === 0 ? months : months.toFixed(1)} months`;
+  })();
 
   return (
     <div className="min-h-screen bg-[#f7f5f2] flex">
@@ -179,8 +197,7 @@ export default function RoadMap() {
           <SidebarLink href="/resume" icon={FileText} label="Resume" />
           <SidebarLink href="/interview" icon={Video} label="Mock Interview" />
           <SidebarLink href="/projects" icon={FolderKanban} label="Projects" />
-          <SidebarLink href="/recommendations" icon={Bookmark} label="Recommendations" />
-          <SidebarLink href="/profile" icon={User} label="Profile" />
+                    <SidebarLink href="/profile" icon={User} label="Profile" />
           <SidebarLink href="/settings" icon={Settings} label="Settings" />
         </div>
 
@@ -251,10 +268,14 @@ export default function RoadMap() {
               </div>
             </div>
             <h2 className="text-3xl font-bold text-[#1d1d1f] mb-2">
-              {incompleteWeeks > 0 ? `${estimatedMonths} mo` : "Done"}
+              {remainingTimeLabel}
             </h2>
             <p className="text-xs text-slate-500">
-              {incompleteWeeks} weeks of focused study left
+              {incompleteWeeks === 0
+                ? "All planned weeks complete"
+                : `${incompleteWeeks} ${
+                    incompleteWeeks === 1 ? "week" : "weeks"
+                  } of focused study left`}
             </p>
           </div>
 
