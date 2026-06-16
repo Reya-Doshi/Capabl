@@ -6,7 +6,6 @@ import {
   FileText,
   Video,
   FolderKanban,
-  Bookmark,
   User,
   Settings,
   Bell,
@@ -242,14 +241,6 @@ export default function Profile() {
           >
             <FolderKanban className="w-5 h-5" />
             Projects
-          </a>
-
-          <a
-            href="/recommendations"
-            className="flex items-center gap-3 px-4 py-3 rounded-2xl hover:bg-[#f5f1ea] transition-all font-medium"
-          >
-            <Bookmark className="w-5 h-5" />
-            Recommendations
           </a>
 
           <a
