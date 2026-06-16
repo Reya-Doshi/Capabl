@@ -193,7 +193,7 @@ export default function Features() {
 
                 <p className="text-xs text-slate-500 leading-relaxed font-medium">
 
-                  Get AI-powered career recommendations that match your skills and interests.
+                  See how strongly you match your target role — scored against the skills that role actually needs.
 
                 </p>
 

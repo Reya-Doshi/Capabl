@@ -1,8 +1,5 @@
 import MainLayout from "../layouts/MainLayout";
 
-import Reya from "../assets/images/reya.jpg";
-import Vaishnavi from "../assets/images/vaishnavi.jpg";
-
 import {
   ArrowRight,
   Sparkles,
@@ -290,92 +287,6 @@ export default function About() {
               </div>
 
             ))}
-
-          </div>
-
-        </section>
-
-        {/* TEAM */}
-
-        <section className="bg-[#f5f1ea] py-32">
-
-          <div className="max-w-7xl mx-auto px-8">
-
-            <div className="text-center space-y-6 mb-20">
-
-              <div className="inline-block px-4 py-1 rounded-full border border-[#b89968] text-[10px] font-bold tracking-widest text-[#b89968] uppercase">
-
-                Meet the Team
-
-              </div>
-
-              <h2 className="text-5xl font-extrabold tracking-tight text-[#1d1d1f]">
-
-                The minds behind Capabl
-
-              </h2>
-
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 max-w-4xl mx-auto">
-
-              {/* REYA */}
-
-              <div className="bg-white rounded-[2rem] overflow-hidden shadow-lg hover:-translate-y-2 transition-all duration-300">
-
-                <div className="h-[450px] overflow-hidden">
-
-                  <img
-                    src={Reya}
-                    alt="Reya"
-                    className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
-                  />
-
-                </div>
-
-                <div className="p-8 text-center">
-
-                  <h4 className="text-2xl font-bold">
-                    Reya Doshi
-                  </h4>
-
-                  <p className="text-sm text-[#b89968] font-bold uppercase tracking-widest mt-2">
-                    Co-Founder & CEO
-                  </p>
-
-                </div>
-
-              </div>
-
-              {/* VAISHNAVI */}
-
-              <div className="bg-white rounded-[2rem] overflow-hidden shadow-lg hover:-translate-y-2 transition-all duration-300">
-
-                <div className="h-[450px] overflow-hidden">
-
-                  <img
-                    src={Vaishnavi}
-                    alt="Vaishnavi"
-                    className="w-full h-full object-cover grayscale hover:grayscale-0 transition-all duration-500"
-                  />
-
-                </div>
-
-                <div className="p-8 text-center">
-
-                  <h4 className="text-2xl font-bold">
-                    Vaishnavi Patil
-                  </h4>
-
-                  <p className="text-sm text-[#b89968] font-bold uppercase tracking-widest mt-2">
-                    Co-Founder & CTO
-                  </p>
-
-                </div>
-
-              </div>
-
-            </div>
 
           </div>
 

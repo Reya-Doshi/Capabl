@@ -4,15 +4,15 @@ import {
   BrainCircuit,
   BarChart3,
   MapPin,
-  MessageSquare,
   Video,
-  Target,
+  SlidersHorizontal,
+  FolderGit2,
   TrendingUp,
   Star,
   ShieldCheck,
-  Zap,
-  Trophy,
-  Headphones,
+  Sparkles,
+  Scale,
+  Eye,
   ArrowRight,
 } from "lucide-react";
 
@@ -20,50 +20,50 @@ export default function HowItWorks() {
   const steps = [
     {
       number: "01",
-      title: "Upload Your Resume",
-      desc: "Upload your resume in seconds. We extract your skills and experience.",
+      title: "Upload Resume & GitHub",
+      desc: "Upload your resume and link GitHub — we extract your skills, projects, and experience.",
       icon: <FileUp className="w-8 h-8 text-[#b89968]" />,
     },
     {
       number: "02",
-      title: "Deep AI Profile Analysis",
-      desc: "Our AI analyzes your profile deeply and understands your potential.",
+      title: "AI Profile Analysis",
+      desc: "AI reads your resume and GitHub and builds an explainable readiness score for your goal.",
       icon: <BrainCircuit className="w-8 h-8 text-[#b89968]" />,
     },
     {
       number: "03",
       title: "Skill Gap Analysis",
-      desc: "We identify the skills you're missing compared to industry standards.",
+      desc: "We weigh your evidence against the skills your target role actually requires.",
       icon: <BarChart3 className="w-8 h-8 text-[#b89968]" />,
     },
     {
       number: "04",
       title: "Personalized Roadmap",
-      desc: "Get a custom learning roadmap with resources and milestones.",
+      desc: "Get a stage-by-stage learning plan with curated resources and weekly milestones.",
       icon: <MapPin className="w-8 h-8 text-[#b89968]" />,
     },
     {
       number: "05",
-      title: "Direct AI Interaction",
-      desc: "Chat with AI to get career guidance and explore opportunities.",
-      icon: <MessageSquare className="w-8 h-8 text-[#b89968]" />,
-    },
-    {
-      number: "06",
       title: "AI Mock Interview",
-      desc: "Practice real interview questions and get instant feedback.",
+      desc: "Practice adaptive questions with Rexa and get a detailed, dimension-by-dimension scorecard.",
       icon: <Video className="w-8 h-8 text-[#b89968]" />,
     },
     {
+      number: "06",
+      title: "What-If Simulator",
+      desc: "Toggle skills you plan to learn and watch your role-match score recompute live.",
+      icon: <SlidersHorizontal className="w-8 h-8 text-[#b89968]" />,
+    },
+    {
       number: "07",
-      title: "Practice & Prepare",
-      desc: "Sharpen your skills consistently with AI-driven tools.",
-      icon: <Target className="w-8 h-8 text-[#b89968]" />,
+      title: "Project Intelligence",
+      desc: "Your GitHub projects are scored for how well they prove the skills your role needs.",
+      icon: <FolderGit2 className="w-8 h-8 text-[#b89968]" />,
     },
     {
       number: "08",
-      title: "Track Your Progress",
-      desc: "Track your progress and become 100% career ready.",
+      title: "Track Your Readiness",
+      desc: "As you add evidence — projects, interviews, certs — watch your readiness climb.",
       icon: <TrendingUp className="w-8 h-8 text-[#b89968]" />,
     },
   ];
@@ -147,10 +147,10 @@ export default function HowItWorks() {
 
             <div className="grid grid-cols-2 gap-x-12 gap-y-8">
               {[
-                { icon: <ShieldCheck className="w-5 h-5 text-[#b89968]" />, title: "Secure & Private", sub: "100% Confidential" },
-                { icon: <Zap className="w-5 h-5 text-[#b89968]" />, title: "AI-Powered", sub: "Smart Algorithms" },
-                { icon: <Trophy className="w-5 h-5 text-[#b89968]" />, title: "Proven Results", sub: "Trusted by 1K+" },
-                { icon: <Headphones className="w-5 h-5 text-[#b89968]" />, title: "24/7 Support", sub: "Anytime Anywhere" },
+                { icon: <ShieldCheck className="w-5 h-5 text-[#b89968]" />, title: "Private & Secure", sub: "Your data stays yours" },
+                { icon: <Sparkles className="w-5 h-5 text-[#b89968]" />, title: "Hybrid AI", sub: "LLM + auditable rules" },
+                { icon: <Scale className="w-5 h-5 text-[#b89968]" />, title: "Explainable Scores", sub: "Every point traceable" },
+                { icon: <Eye className="w-5 h-5 text-[#b89968]" />, title: "You Decide", sub: "Human in the loop" },
               ].map((item, index) => (
                 <div key={index} className="flex items-center gap-3">
                   {item.icon}

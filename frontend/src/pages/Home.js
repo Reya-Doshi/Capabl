@@ -2,7 +2,6 @@ import MainLayout from "../layouts/MainLayout";
 
 import {
   Upload,
-  Star,
   LayoutGrid,
   FileText,
   Target,
@@ -88,62 +87,33 @@ export default function Home() {
 
               </div>
 
-              {/* RATINGS */}
+              {/* TRUST STRIP */}
 
-              <div className="flex items-center gap-6 pt-6">
-
-                <div className="flex">
-
-                  <img
-                    src="https://i.pravatar.cc/100?u=1"
-                    alt=""
-                    className="w-10 h-10 rounded-full border-2 border-white"
-                  />
-
-                  <img
-                    src="https://i.pravatar.cc/100?u=2"
-                    alt=""
-                    className="w-10 h-10 rounded-full border-2 border-white -ml-3"
-                  />
-
-                  <img
-                    src="https://i.pravatar.cc/100?u=3"
-                    alt=""
-                    className="w-10 h-10 rounded-full border-2 border-white -ml-3"
-                  />
-
-                  <img
-                    src="https://i.pravatar.cc/100?u=4"
-                    alt=""
-                    className="w-10 h-10 rounded-full border-2 border-white -ml-3"
-                  />
-
-                </div>
+              <div className="flex flex-wrap items-center gap-x-8 gap-y-4 pt-6">
 
                 <div>
-
-                  <div className="flex items-center gap-1">
-
-                    <Star className="w-4 h-4 fill-[#c98a3c] text-[#c98a3c]" />
-                    <Star className="w-4 h-4 fill-[#c98a3c] text-[#c98a3c]" />
-                    <Star className="w-4 h-4 fill-[#c98a3c] text-[#c98a3c]" />
-                    <Star className="w-4 h-4 fill-[#c98a3c] text-[#c98a3c]" />
-                    <Star className="w-4 h-4 fill-[#c98a3c] text-[#c98a3c]" />
-
-                    <span className="text-sm font-bold ml-1">
-
-                      4.8/5
-
-                    </span>
-
-                  </div>
-
-                  <p className="text-[13px] text-slate-500 font-medium">
-
-                    Loved by 1K+ students
-
+                  <p className="text-2xl font-extrabold text-[#1d1d1f]">6</p>
+                  <p className="text-[12px] text-slate-500 font-medium">
+                    evidence sources,<br />one explainable score
                   </p>
+                </div>
 
+                <div className="w-px h-10 bg-[#e8e6e1] hidden sm:block"></div>
+
+                <div>
+                  <p className="text-2xl font-extrabold text-[#1d1d1f]">100%</p>
+                  <p className="text-[12px] text-slate-500 font-medium">
+                    traceable —<br />no black-box scores
+                  </p>
+                </div>
+
+                <div className="w-px h-10 bg-[#e8e6e1] hidden sm:block"></div>
+
+                <div>
+                  <p className="text-2xl font-extrabold text-[#1d1d1f]">You</p>
+                  <p className="text-[12px] text-slate-500 font-medium">
+                    decide — the AI<br />guides, never chooses
+                  </p>
                 </div>
 
               </div>
@@ -617,11 +587,11 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-8">
 
               {[
-                "Resume Analysis",
-                "Career Match",
-                "Skill Gap",
-                "Personalized Roadmap",
-                "AI Mock Interview",
+                { title: "Resume & GitHub Analysis", desc: "We parse your resume and repos into a skill profile with an explainable readiness score." },
+                { title: "Skill Gap Analysis", desc: "See which role-required skills you have, which you're missing, and exactly why." },
+                { title: "Personalized Roadmap", desc: "A stage-by-stage plan with curated resources to close your biggest gaps first." },
+                { title: "AI Mock Interview", desc: "Adaptive practice with Rexa, plus a dimension-by-dimension scorecard." },
+                { title: "What-If Simulator", desc: "Toggle skills you plan to learn and watch your role-match score update live." },
               ].map((item, index) => (
 
                 <div
@@ -637,13 +607,13 @@ export default function Home() {
 
                   <h3 className="font-bold text-xl mb-4">
 
-                    {item}
+                    {item.title}
 
                   </h3>
 
                   <p className="text-[14px] text-slate-500 leading-relaxed">
 
-                    AI-powered tools helping students become career ready.
+                    {item.desc}
 
                   </p>
 
