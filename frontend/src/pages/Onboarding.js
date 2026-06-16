@@ -91,6 +91,9 @@ export default function Onboarding() {
   const [portfolio, setPortfolio] = useState("");
 
   const [careerGoal, setCareerGoal] = useState("");
+  // True when the user picked "Other / Custom Role" — careerGoal then holds
+  // their free-text role and is validated separately before submit.
+  const [customMode, setCustomMode] = useState(false);
 
   // Async UI states
   const [extracting, setExtracting] = useState(false);
@@ -203,8 +206,15 @@ export default function Onboarding() {
 
   // ── Step 4: confirm → save → analyze ──────────────────────────────────
   const handleSubmit = async () => {
-    if (!careerGoal) {
-      toast.error("Please select a career goal");
+    const trimmedGoal = careerGoal.trim();
+    if (!trimmedGoal) {
+      toast.error(
+        customMode ? "Please enter your target role" : "Please select a career goal"
+      );
+      return;
+    }
+    if (customMode && trimmedGoal.length < 3) {
+      toast.error("Custom role must be at least 3 characters");
       return;
     }
     if (skills.length === 0) {
@@ -224,7 +234,7 @@ export default function Onboarding() {
       form.append("github", github);
       form.append("linkedin", linkedin);
       form.append("portfolio", portfolio);
-      form.append("careerGoal", careerGoal);
+      form.append("careerGoal", trimmedGoal);
       form.append("skills", JSON.stringify(skills));
       form.append("education", JSON.stringify([education]));
       form.append("certifications", JSON.stringify(certifications));
@@ -339,6 +349,8 @@ export default function Onboarding() {
           <GoalStep
             careerGoal={careerGoal}
             setCareerGoal={setCareerGoal}
+            customMode={customMode}
+            setCustomMode={setCustomMode}
             saving={saving}
             onBack={() => setStep(3)}
             onSubmit={handleSubmit}
@@ -874,7 +886,29 @@ function OptionalLinksStep(props) {
   );
 }
 
-function GoalStep({ careerGoal, setCareerGoal, saving, onBack, onSubmit }) {
+const CUSTOM_ROLE_EXAMPLES = [
+  "Machine Learning Engineer",
+  "Data Engineer",
+  "Cloud Engineer",
+  "QA Engineer",
+  "Business Analyst",
+  "UI/UX Designer",
+];
+
+function GoalStep({
+  careerGoal,
+  setCareerGoal,
+  customMode,
+  setCustomMode,
+  saving,
+  onBack,
+  onSubmit,
+}) {
+  const trimmedGoal = careerGoal.trim();
+  // Block continue until a valid role exists: a preset selection, or a custom
+  // role of at least 3 characters.
+  const canContinue = customMode ? trimmedGoal.length >= 3 : Boolean(trimmedGoal);
+
   return (
     <div>
       <div className="text-center mb-8">
@@ -891,12 +925,15 @@ function GoalStep({ careerGoal, setCareerGoal, saving, onBack, onSubmit }) {
 
       <div className="grid sm:grid-cols-2 gap-3">
         {CAREER_GOALS.map((goal) => {
-          const active = careerGoal === goal;
+          const active = !customMode && careerGoal === goal;
           return (
             <button
               key={goal}
               type="button"
-              onClick={() => setCareerGoal(goal)}
+              onClick={() => {
+                setCustomMode(false);
+                setCareerGoal(goal);
+              }}
               className={`h-14 rounded-2xl px-5 text-left font-semibold border transition-all ${
                 active
                   ? "border-[#1d1d1f] bg-[#1d1d1f] text-white"
@@ -907,11 +944,64 @@ function GoalStep({ careerGoal, setCareerGoal, saving, onBack, onSubmit }) {
             </button>
           );
         })}
+
+        {/* Custom role card */}
+        <button
+          type="button"
+          onClick={() => {
+            setCustomMode(true);
+            setCareerGoal("");
+          }}
+          className={`h-14 rounded-2xl px-5 text-left font-semibold border transition-all flex items-center gap-2 ${
+            customMode
+              ? "border-[#1d1d1f] bg-[#1d1d1f] text-white"
+              : "border-dashed border-[#cdc7bd] bg-[#fafafa] text-[#1d1d1f] hover:border-[#b89968]"
+          }`}
+        >
+          <Sparkles className="w-4 h-4 shrink-0" />
+          Other / Custom Role
+        </button>
       </div>
+
+      {/* Custom role input — appears directly below the role grid */}
+      {customMode && (
+        <div className="mt-4">
+          <label className="text-sm font-semibold text-[#1d1d1f] block mb-2">
+            Enter your target role
+          </label>
+          <FieldShell icon={Target}>
+            <input
+              type="text"
+              autoFocus
+              value={careerGoal}
+              onChange={(e) => setCareerGoal(e.target.value)}
+              placeholder="e.g. Machine Learning Engineer"
+              className="bg-transparent outline-none flex-1"
+            />
+          </FieldShell>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {CUSTOM_ROLE_EXAMPLES.map((ex) => (
+              <button
+                key={ex}
+                type="button"
+                onClick={() => setCareerGoal(ex)}
+                className="px-3 py-1 rounded-full border border-[#e8e6e1] text-xs font-medium hover:bg-[#f5f1ea]"
+              >
+                {ex}
+              </button>
+            ))}
+          </div>
+          {trimmedGoal.length > 0 && trimmedGoal.length < 3 && (
+            <p className="text-xs text-red-500 mt-2">
+              Role must be at least 3 characters.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex gap-3 mt-8">
         <BackButton onClick={onBack} />
-        <PrimaryButton onClick={onSubmit} disabled={saving}>
+        <PrimaryButton onClick={onSubmit} disabled={saving || !canContinue}>
           {saving ? (
             <>
               <Loader2 className="w-5 h-5 animate-spin" />
