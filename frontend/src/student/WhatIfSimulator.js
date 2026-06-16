@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
-import { Sparkles, TrendingUp, Loader2, Target, CheckCircle2, AlertCircle } from "lucide-react";
+import { TrendingUp, Loader2, Target, CheckCircle2, AlertCircle, RefreshCw, ExternalLink } from "lucide-react";
 import { apiUrl } from "../config/api";
 
 const SOURCE_LABELS = {
@@ -33,13 +33,14 @@ export default function WhatIfSimulator({ targetRole, skills, initialScore }) {
   const [error, setError] = useState(null);
   const debounceRef = useRef(null);
 
-  // Candidate skills to toggle: gaps first (readiness < 100), sorted by weight.
+  // Candidate skills to toggle: every required skill for the role, sorted by
+  // weight (highest impact first). No cap — the simulator reflects the full
+  // role, so a user never sees a fixed 8-skill list regardless of their goal.
   const candidateSkills = useMemo(() => {
     const list = Array.isArray(skills) ? skills : [];
     return [...list]
       .filter((s) => s?.name)
-      .sort((a, b) => (b?.weight ?? 0) - (a?.weight ?? 0))
-      .slice(0, 8);
+      .sort((a, b) => (b?.weight ?? 0) - (a?.weight ?? 0));
   }, [skills]);
 
   const baseScore = simulationData?.currentScore ?? initialScore ?? 0;
@@ -128,21 +129,21 @@ export default function WhatIfSimulator({ targetRole, skills, initialScore }) {
   const activeReason = activeReasoning ? reasoningFor(activeReasoning) : null;
 
   return (
-    <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-7">
+    <div className="bg-white border border-[#e8e6e1] rounded-[2rem] p-5 sm:p-7">
       {/* 1. Header row */}
-      <div className="flex items-start justify-between mb-5">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#e8f8ef] flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-[#e8f8ef] flex items-center justify-center shrink-0">
             <Target className="w-5 h-5 text-green-600" />
           </div>
-          <div>
+          <div className="min-w-0">
             <h2 className="text-xl font-bold text-[#1d1d1f]">What-if Simulator</h2>
-            <p className="text-sm text-slate-500">{targetRole || "Your target role"}</p>
+            <p className="text-sm text-slate-500 truncate">{targetRole || "Your target role"}</p>
           </div>
         </div>
-        <div className="text-right">
+        <div className="text-left sm:text-right shrink-0">
           <p className="text-xs font-semibold text-slate-500 mb-0.5">Role Match Score</p>
-          <div className="flex items-center gap-2 justify-end">
+          <div className="flex items-center gap-2 justify-start sm:justify-end">
             <span className="text-4xl font-bold text-green-600">{projectedScore}%</span>
             {delta > 0 && (
               <span className="px-2 py-1 rounded-full bg-[#e8f8ef] text-green-700 text-sm font-semibold transition-opacity">
@@ -303,7 +304,20 @@ export default function WhatIfSimulator({ targetRole, skills, initialScore }) {
           )}
         </button>
       ) : (
-        <WeeklyPlanCard plan={weeklyPlan} />
+        <div className="space-y-3">
+          <WeeklyPlanCard plan={weeklyPlan} />
+          {/* Stay interactive after a plan is generated — let the user re-toggle
+              skills and build a fresh plan without reloading the page. */}
+          <button
+            onClick={() => {
+              setIsCommitted(false);
+              setWeeklyPlan(null);
+            }}
+            className="w-full h-12 rounded-2xl border border-[#e8e6e1] text-[#1d1d1f] font-semibold flex items-center justify-center gap-2 hover:bg-[#f5f1ea] transition-all"
+          >
+            <RefreshCw className="w-4 h-4" /> Adjust skills &amp; generate a new plan
+          </button>
+        </div>
       )}
     </div>
   );
@@ -311,11 +325,12 @@ export default function WhatIfSimulator({ targetRole, skills, initialScore }) {
 
 function WeeklyPlanCard({ plan }) {
   if (!plan) return null;
+  const resources = Array.isArray(plan?.resources) ? plan.resources : [];
   return (
-    <div className="border border-[#e8e6e1] rounded-2xl p-5">
+    <div className="border border-[#e8e6e1] rounded-2xl p-4 sm:p-5">
       <div className="bg-[#e8f8ef] rounded-xl px-4 py-3 mb-4">
-        <div className="flex items-center gap-2 mb-1">
-          <CheckCircle2 className="w-4 h-4 text-green-600" />
+        <div className="flex items-start gap-2 mb-1">
+          <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
           <span className="font-semibold text-[#1d1d1f]">{plan?.weekGoal}</span>
         </div>
         <p className="text-sm text-green-700 font-medium">
@@ -323,21 +338,57 @@ function WeeklyPlanCard({ plan }) {
           {plan?.expectedGain ? ` (+${plan.expectedGain})` : ""}
         </p>
       </div>
+
+      {/* 7-day plan */}
       <div className="space-y-2">
         {(plan?.days || []).map((d, i) => (
           <div
             key={i}
-            className="flex items-center gap-3 border border-[#e8e6e1] rounded-xl px-4 py-2.5"
+            className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-3 border border-[#e8e6e1] rounded-xl px-4 py-2.5"
           >
             <span className="w-20 text-sm font-semibold text-[#1d1d1f] shrink-0">{d?.day}</span>
             <span className="flex-1 text-sm text-slate-600">{d?.task}</span>
-            <span className="text-xs text-[#b89968] font-medium">{d?.resource}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-[#f5f1ea] text-slate-500 shrink-0">
-              {d?.duration}
-            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              {d?.resource && (
+                <span className="text-xs text-[#b89968] font-medium">{d.resource}</span>
+              )}
+              {d?.duration && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-[#f5f1ea] text-slate-500">
+                  {d.duration}
+                </span>
+              )}
+            </div>
           </div>
         ))}
       </div>
+
+      {/* Per-skill learning links */}
+      {resources.length > 0 && (
+        <div className="mt-5">
+          <p className="text-sm font-semibold text-[#1d1d1f] mb-3">Resources to learn</p>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {resources.map((r, i) => (
+              <div key={i} className="border border-[#e8e6e1] rounded-xl p-3">
+                <p className="text-sm font-semibold text-[#1d1d1f] capitalize mb-2">{r?.skill}</p>
+                <div className="space-y-1.5">
+                  {(r?.links || []).map((link, j) => (
+                    <a
+                      key={j}
+                      href={link?.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
+                    >
+                      <ExternalLink className="w-3 h-3 shrink-0" />
+                      <span className="truncate">{link?.title}</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

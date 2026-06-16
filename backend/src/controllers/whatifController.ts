@@ -4,6 +4,7 @@ import readinessService, {
   DataCompleteness,
 } from "../services/readinessService.js";
 import { generateJson } from "../services/geminiText.js";
+import { resourcesForSkill } from "../services/skillResources.js";
 
 const normalize = (s: unknown): string => String(s ?? "").trim().toLowerCase();
 
@@ -233,12 +234,19 @@ Rules:
       },
     });
 
+    // Curated, real learning links per focused skill (never AI-hallucinated URLs).
+    const resources = skillsToFocus.map((skill) => ({
+      skill,
+      links: resourcesForSkill(skill).slice(0, 3),
+    }));
+
     return res.json({
       goalId: goal.id,
       weekGoal: plan.weekGoal,
       expectedGain,
       projectedScoreByWeekend,
       days: plan.days,
+      resources,
     });
   } catch (error: any) {
     console.error("commitGoal error:", error);
