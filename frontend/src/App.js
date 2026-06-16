@@ -18,7 +18,6 @@ import SkillGap from "./student/SkillGap";
 import Resume from "./student/Resume";
 import Interview from "./student/Interview";
 import Projects from "./student/Projects";
-import Recommendations from "./student/Recommendations";
 import Profile from "./student/Profile";
 import Settings from "./student/Settings";
 
@@ -110,14 +109,6 @@ export default function App() {
           element={
             <ProtectedRoute>
               <Projects />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/recommendations"
-          element={
-            <ProtectedRoute>
-              <Recommendations />
             </ProtectedRoute>
           }
         />
