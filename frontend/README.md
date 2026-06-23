@@ -68,3 +68,11 @@ This section has moved here: [https://facebook.github.io/create-react-app/docs/d
 ### `npm run build` fails to minify
 
 This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+
+## Capabl Platform Features
+
+This codebase contains features tailored for student career readiness:
+- **Student Dashboard & Custom CSS gauges:** Standardized sidebar navigation across all student screens and introduced beautiful dynamic radial SVG readiness match gauges and horizontal skill breakdown bars.
+- **AI Career Gap Analysis:** Integrated Google Gemini to calculate readiness scores and construct personalized weekly learning paths.
+- **Interactive Voice/Text Mock Interviews:** Integrates with Retell AI to simulate professional interview rounds and provide actionable analytical feedback.
+
