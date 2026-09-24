@@ -1,5 +1,8 @@
 # Capabl — AI Career Decision Simulator
 
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://makeapullrequest.com)
+[![GitHub pull-requests](https://img.shields.io/github/issues-pr/Reya-Doshi/Capabl?style=flat-square)](https://github.com/Reya-Doshi/Capabl/pulls)
+
 Capabl is an AI-powered career decision platform for students. Instead of just telling a student “learn React” or dumping a huge skill checklist, Capabl turns their real evidence — resume, projects, certifications, and mock interview performance — into an evidence-based readiness score, then simulates multiple learning paths with explicit tradeoffs so the student can decide what to do next.
 
 **You decide; the AI never picks for you.**
@@ -374,4 +377,3 @@ Add an appropriate open-source license if you plan to make the repository public
 Capabl is built around a simple belief:
 
 > **Students don't just need more advice. They need help making better career decisions from the evidence they already have.**
-````
