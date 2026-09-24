@@ -2,6 +2,9 @@
 
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://makeapullrequest.com)
 [![GitHub pull-requests](https://img.shields.io/github/issues-pr/Reya-Doshi/Capabl?style=flat-square)](https://github.com/Reya-Doshi/Capabl/pulls)
+[![USAII Global Hackathon Finalist](https://img.shields.io/badge/USAII%20Global%20Hackathon-Finalist%20🏆-blueviolet?style=flat-square)](#-recognition)
+
+> 🏆 **Finalist at the USAII Global Hackathon** — Recognized as a global finalist project for AI career decision simulation and evidence-based readiness evaluation.
 
 Capabl is an AI-powered career decision platform for students. Instead of just telling a student “learn React” or dumping a huge skill checklist, Capabl turns their real evidence — resume, projects, certifications, and mock interview performance — into an evidence-based readiness score, then simulates multiple learning paths with explicit tradeoffs so the student can decide what to do next.
 
@@ -350,6 +353,19 @@ Capabl is still evolving. Future improvements include:
 - Longer 30/60/90-day learning plans
 - Repeated simulations as the student's evidence grows
 - Stronger recruiter-facing profile insights
+
+---
+
+## 🏆 Recognition
+
+- **USAII Global Hackathon Finalist** — Selected as a global finalist for demonstrating an evidence-grounded AI decision platform for students and career transitions.
+
+---
+
+## 👥 Authors & Contributors
+
+- **Reya Doshi** — [@Reya-Doshi](https://github.com/Reya-Doshi)
+- **Vaishnavi Patil** — [@VaishnaviPatil-gif](https://github.com/VaishnaviPatil-gif)
 
 ---
 
